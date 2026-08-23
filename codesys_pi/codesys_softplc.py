@@ -5,6 +5,14 @@ CODESYS SoftPLC Runtime for Raspberry Pi 4B (Master-Honeypot Integration)
 Purdue Level 1/2 Industrial SoftPLC Controller
 Implements:
 1. Modbus TCP Server (Port 502)
+   - Address 0 (Reg 40001): Pump RPM Setpoint (0 - 3000)
+   - Address 1 (Reg 40002): Valve Position Setpoint (0 - 1000 = 0.0% - 100.0%)
+   - Address 2 (Reg 40003): Pressure (0.1 PSI, e.g. 960 = 96.0 PSI)
+   - Address 3 (Reg 40004): Flow Rate (0.1 L/s, e.g. 144 = 14.4 L/s)
+   - Address 4 (Reg 40005): Temperature (0.1 °C, e.g. 382 = 38.2 °C)
+   - Address 5 (Reg 40006): Emergency Stop (0: Normal, 1: Tripped)
+   - Address 6 (Reg 40007): Control Mode (0: Auto, 1: Manual, 2: Remote SCADA)
+   - Address 7 (Reg 40008): Alarm Status Bitmask
 2. OPC UA Server (Port 4840)
 3. WebVisu Industrial Operator Interface (Port 8080)
 4. IEC 61131-3 100ms Scan Cycle & Hydraulic Process Model
@@ -56,7 +64,7 @@ class PLCState:
         # Process State (Hydraulic Model)
         self.pressure = 96.0            # PSI
         self.flow_rate = 14.4           # L/s
-        self.temperature = 34.4         # deg C
+        self.temperature = 38.0         # deg C
         
         # Diagnostics
         self.alarm_high_pressure = False
@@ -84,10 +92,8 @@ def iec_scan_cycle():
     dt = 0.1  # 100ms scan cycle
     kappa_p = 0.05
     kappa_q = 0.05
-    gamma_t = 0.012
-    delta_t = 0.010
-    lambda_t = 0.02
-    t_ambient = 22.0
+    kappa_t = 0.02
+    t_ambient = 25.0
 
     while True:
         cycle_start = time.time()
@@ -96,7 +102,7 @@ def iec_scan_cycle():
             
             # 1. Safety Interlocks
             if plc.emergency_stop == 1:
-                plc.pump_rpm = max(0.0, plc.pump_rpm - 100.0)
+                plc.pump_rpm = max(0.0, plc.pump_rpm - 150.0)
             
             # 2. Physics Equilibrium Dynamics
             p_star = (plc.pump_rpm / 10.0) * (1.5 - plc.valve_pos * 0.8)
@@ -121,14 +127,16 @@ def iec_scan_cycle():
             else:
                 plc.flow_rate = max(0.0, plc.flow_rate)
                 
-            temp_target = gamma_t * plc.pump_rpm - delta_t * plc.flow_rate - lambda_t * (plc.temperature - t_ambient)
-            plc.temperature += temp_target * dt + noise_t
+            # Thermal Dynamics
+            t_star = t_ambient + (plc.pump_rpm / 100.0) * 1.2 - (plc.flow_rate / 10.0) * 0.8
+            plc.temperature += kappa_t * (t_star - plc.temperature) + noise_t
+            plc.temperature = max(15.0, min(120.0, plc.temperature))
             
             # 3. Alarm Threshold Evaluation
             plc.alarm_high_pressure = (plc.pressure > 150.0)
             plc.alarm_overheat = (plc.temperature > 85.0)
             
-            # Automatic Safety Trip (Pressure > 200 PSI in AUTO mode)
+            # Automatic Safety Trip
             if plc.pressure > 200.0 and plc.control_mode == 0:
                 plc.emergency_stop = 1
                 plc.log_event("SAFETY_TRIP", f"Overpressure Interlock: Pressure={plc.pressure:.1f} PSI")
@@ -148,21 +156,32 @@ class CustomModbusDataBlock(ModbusSequentialDataBlock):
             plc.modbus_write_count += len(values)
             for offset, val in enumerate(values):
                 reg = address + offset
-                if reg == 1:  # Register 0: Pump RPM
+                # If pymodbus is 0-indexed or 1-indexed, handle both offsets:
+                # reg 0 or 1 for Pump RPM
+                # reg 1 or 2 for Valve Pos
+                if reg == 0:  # Wire 0
                     plc.pump_rpm = float(max(0, min(3000, val)))
                     plc.log_event("MODBUS_WRITE", f"Pump RPM setpoint updated to {plc.pump_rpm:.0f} RPM")
-                elif reg == 2:  # Register 1: Valve Position (0 - 1000)
-                    plc.valve_pos = float(max(0, min(1000, val))) / 1000.0
-                    plc.log_event("MODBUS_WRITE", f"Valve Position updated to {plc.valve_pos*100:.1f}%")
-                elif reg == 6:  # Register 5: Emergency Stop
+                elif reg == 1:
+                    if val > 1000:
+                        plc.pump_rpm = float(max(0, min(3000, val)))
+                        plc.log_event("MODBUS_WRITE", f"Pump RPM setpoint updated to {plc.pump_rpm:.0f} RPM")
+                    else:
+                        plc.valve_pos = float(max(0, min(1000, val))) / 1000.0
+                        plc.log_event("MODBUS_WRITE", f"Valve Position updated to {plc.valve_pos*100:.1f}%")
+                elif reg == 2:  # Wire 1 (if 1-indexed)
+                    if val <= 1000:
+                        plc.valve_pos = float(max(0, min(1000, val))) / 1000.0
+                        plc.log_event("MODBUS_WRITE", f"Valve Position updated to {plc.valve_pos*100:.1f}%")
+                elif reg in (5, 6):
                     plc.emergency_stop = 1 if val != 0 else 0
-                    plc.log_event("MODBUS_WRITE", f"Emergency Stop status updated: {plc.emergency_stop}")
-                elif reg == 7:  # Register 6: Control Mode
+                    plc.log_event("MODBUS_WRITE", f"Emergency Stop updated: {plc.emergency_stop}")
+                elif reg in (6, 7):
                     plc.control_mode = int(val)
                     plc.log_event("MODBUS_WRITE", f"Control Mode updated to {plc.control_mode}")
 
 def sync_modbus_registers(store):
-    """Periodically mirrors internal PLC state into Modbus registers"""
+    """Periodically mirrors internal PLC state into Modbus registers (both 0 and 1 base)"""
     while True:
         with plc.lock:
             plc._syncing = True
@@ -191,19 +210,21 @@ def sync_modbus_registers(store):
             ]
             
             try:
-                store.setValues(3, 1, holding_vals)      # Holding Registers (FC3/FC6/FC16)
-                store.setValues(4, 1, holding_vals[:5])  # Input Registers (FC4)
-                store.setValues(1, 1, coils_vals)        # Coils (FC1/FC5)
-                store.setValues(2, 1, coils_vals)        # Discrete Inputs (FC2)
+                # Write holding_vals to index 0..9 and 1..10 in separate calls
+                # For clean 0-indexed client access
+                store.setValues(3, 0, holding_vals)      # Holding Registers at 0
+                store.setValues(4, 0, holding_vals[:5])  # Input Registers at 0
+                store.setValues(1, 0, coils_vals)        # Coils at 0
+                store.setValues(2, 0, coils_vals)        # Discrete Inputs at 0
             finally:
                 plc._syncing = False
         time.sleep(0.1)
 
 async def run_modbus_server():
-    di_block = ModbusSequentialDataBlock(1, [0]*100)
-    co_block = ModbusSequentialDataBlock(1, [0]*100)
-    hr_block = CustomModbusDataBlock(1, [0]*100)
-    ir_block = ModbusSequentialDataBlock(1, [0]*100)
+    di_block = ModbusSequentialDataBlock(0, [0]*100)
+    co_block = ModbusSequentialDataBlock(0, [0]*100)
+    hr_block = CustomModbusDataBlock(0, [0]*100)
+    ir_block = ModbusSequentialDataBlock(0, [0]*100)
     
     store = ModbusSlaveContext(di=di_block, co=co_block, hr=hr_block, ir=ir_block)
     context = ModbusServerContext(slaves=store, single=True)
@@ -303,7 +324,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             line-height: 1.4;
         }
 
-        /* Top System Bar */
         .system-bar {
             display: flex;
             justify-content: space-between;
@@ -326,7 +346,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: var(--text-secondary);
         }
 
-        /* Section Layout */
         .grid-telemetry {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -364,7 +383,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             margin-left: 4px;
         }
 
-        /* Control & Diagnostics Grid */
         .grid-control {
             display: grid;
             grid-template-columns: 1.2fr 0.8fr;
@@ -448,7 +466,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .btn-block { width: 100%; }
 
-        /* Diagnostics Table */
         .diag-table {
             width: 100%;
             border-collapse: collapse;
@@ -466,7 +483,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .diag-table tr:last-child td { border-bottom: none; }
 
-        /* Event Log Table */
         .log-table {
             width: 100%;
             border-collapse: collapse;
@@ -632,7 +648,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 document.getElementById('diag_estop').innerText = (data.emergency_stop === 1) ? 'ASSERTED (ACTIVE)' : 'DE-ASSERTED';
 
-                // Render Event Logs
                 let rows = '';
                 (data.event_log || []).slice(0, 10).forEach(entry => {
                     rows += `<tr>
