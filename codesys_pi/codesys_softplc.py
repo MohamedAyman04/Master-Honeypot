@@ -2,11 +2,12 @@
 """
 CODESYS SoftPLC Runtime for Raspberry Pi 4B (Master-Honeypot Integration)
 ========================================================================
+Purdue Level 1/2 Industrial SoftPLC Controller
 Implements:
-1. Modbus TCP Server (Port 502) - Standard industrial fieldbus protocol
-2. OPC UA Server (Port 4840) - Standard industrial SCADA / enterprise protocol
-3. WebVisu Web Interface (Port 8080) - Real-time SCADA operator display
-4. IEC 61131-3 Scan Cycle Engine (100ms) - Physics-aware industrial pipeline control & safety logic
+1. Modbus TCP Server (Port 502)
+2. OPC UA Server (Port 4840)
+3. WebVisu Industrial Operator Interface (Port 8080)
+4. IEC 61131-3 100ms Scan Cycle & Hydraulic Process Model
 """
 
 import sys
@@ -16,7 +17,7 @@ import random
 import threading
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, jsonify, render_template_string, request
 
 # Modbus Libraries
@@ -47,28 +48,27 @@ class PLCState:
     def __init__(self):
         self.lock = threading.RLock()
         # Control Variables
-        self.pump_rpm = 1200.0          # Range: 0 - 3000
+        self.pump_rpm = 1200.0          # Range: 0 - 3000 RPM
         self.valve_pos = 0.60           # Range: 0.0 - 1.0 (60%)
         self.emergency_stop = 0         # 0: Normal, 1: Tripped
-        self.control_mode = 0           # 0: Auto, 1: Manual, 2: Remote SCADA
+        self.control_mode = 0           # 0: AUTO, 1: MANUAL, 2: REMOTE_SCADA
         
         # Process State (Hydraulic Model)
-        self.pressure = 96.0            # PSI (Normal: ~96 PSI)
+        self.pressure = 96.0            # PSI
         self.flow_rate = 14.4           # L/s
-        self.temperature = 34.4         # °C
+        self.temperature = 34.4         # deg C
         
         # Diagnostics
         self.alarm_high_pressure = False
         self.alarm_overheat = False
         self.scan_count = 0
         self.start_time = time.time()
-        self.last_modbus_client = "None"
         self.modbus_write_count = 0
         self.event_log = []
         self._syncing = False
 
     def log_event(self, event_type, details):
-        ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         entry = {"time": ts, "type": event_type, "details": details}
         with self.lock:
             self.event_log.insert(0, entry)
@@ -94,7 +94,7 @@ def iec_scan_cycle():
         with plc.lock:
             plc.scan_count += 1
             
-            # 1. Check Safety Interlocks (IEC Safety Function Block)
+            # 1. Safety Interlocks
             if plc.emergency_stop == 1:
                 plc.pump_rpm = max(0.0, plc.pump_rpm - 100.0)
             
@@ -102,12 +102,12 @@ def iec_scan_cycle():
             p_star = (plc.pump_rpm / 10.0) * (1.5 - plc.valve_pos * 0.8)
             q_star = (plc.pump_rpm / 50.0) * plc.valve_pos
             
-            # Apply Hard Constraints (Valve Closed clamping)
+            # Hard Constraints (Valve Closed Clamping)
             if plc.valve_pos <= 0.01:
                 q_star = 0.0
                 p_star = (plc.pump_rpm / 10.0) * 1.5
             
-            # Differential State Evolution
+            # Differential State Evolution with Gaussian Noise
             noise_p = random.gauss(0, 0.2)
             noise_q = random.gauss(0, 0.05)
             noise_t = random.gauss(0, 0.05)
@@ -124,14 +124,14 @@ def iec_scan_cycle():
             temp_target = gamma_t * plc.pump_rpm - delta_t * plc.flow_rate - lambda_t * (plc.temperature - t_ambient)
             plc.temperature += temp_target * dt + noise_t
             
-            # 3. Alarm Logic & Safety Limits
+            # 3. Alarm Threshold Evaluation
             plc.alarm_high_pressure = (plc.pressure > 150.0)
             plc.alarm_overheat = (plc.temperature > 85.0)
             
-            # Auto-trip in Safety Mode if pressure exceeds critical threshold (200 PSI)
+            # Automatic Safety Trip (Pressure > 200 PSI in AUTO mode)
             if plc.pressure > 200.0 and plc.control_mode == 0:
                 plc.emergency_stop = 1
-                plc.log_event("SAFETY_INTERLOCK", f"Overpressure trip activated: Pressure={plc.pressure:.1f} PSI")
+                plc.log_event("SAFETY_TRIP", f"Overpressure Interlock: Pressure={plc.pressure:.1f} PSI")
 
         elapsed = time.time() - cycle_start
         sleep_time = max(0.005, dt - elapsed)
@@ -141,7 +141,6 @@ def iec_scan_cycle():
 class CustomModbusDataBlock(ModbusSequentialDataBlock):
     def setValues(self, address, values):
         super().setValues(address, values)
-        # Only process external writes
         if getattr(plc, "_syncing", False):
             return
         
@@ -151,19 +150,19 @@ class CustomModbusDataBlock(ModbusSequentialDataBlock):
                 reg = address + offset
                 if reg == 1:  # Register 0: Pump RPM
                     plc.pump_rpm = float(max(0, min(3000, val)))
-                    plc.log_event("MODBUS_WRITE", f"Pump RPM set to {plc.pump_rpm}")
-                elif reg == 2:  # Register 1: Valve Position (0 - 1000 = 0.0 - 1.0)
+                    plc.log_event("MODBUS_WRITE", f"Pump RPM setpoint updated to {plc.pump_rpm:.0f} RPM")
+                elif reg == 2:  # Register 1: Valve Position (0 - 1000)
                     plc.valve_pos = float(max(0, min(1000, val))) / 1000.0
-                    plc.log_event("MODBUS_WRITE", f"Valve Position set to {plc.valve_pos*100:.1f}%")
+                    plc.log_event("MODBUS_WRITE", f"Valve Position updated to {plc.valve_pos*100:.1f}%")
                 elif reg == 6:  # Register 5: Emergency Stop
                     plc.emergency_stop = 1 if val != 0 else 0
-                    plc.log_event("MODBUS_WRITE", f"Emergency Stop set to {plc.emergency_stop}")
+                    plc.log_event("MODBUS_WRITE", f"Emergency Stop status updated: {plc.emergency_stop}")
                 elif reg == 7:  # Register 6: Control Mode
                     plc.control_mode = int(val)
-                    plc.log_event("MODBUS_WRITE", f"Control Mode set to {plc.control_mode}")
+                    plc.log_event("MODBUS_WRITE", f"Control Mode updated to {plc.control_mode}")
 
 def sync_modbus_registers(store):
-    """Continuously mirrors internal PLC state into Modbus Holding & Input registers"""
+    """Periodically mirrors internal PLC state into Modbus registers"""
     while True:
         with plc.lock:
             plc._syncing = True
@@ -192,10 +191,10 @@ def sync_modbus_registers(store):
             ]
             
             try:
-                store.setValues(3, 1, holding_vals)  # Holding Registers (FC3/FC6/FC16)
-                store.setValues(4, 1, holding_vals[:5]) # Input Registers (FC4)
-                store.setValues(1, 1, coils_vals)    # Coils (FC1/FC5)
-                store.setValues(2, 1, coils_vals)    # Discrete Inputs (FC2)
+                store.setValues(3, 1, holding_vals)      # Holding Registers (FC3/FC6/FC16)
+                store.setValues(4, 1, holding_vals[:5])  # Input Registers (FC4)
+                store.setValues(1, 1, coils_vals)        # Coils (FC1/FC5)
+                store.setValues(2, 1, coils_vals)        # Discrete Inputs (FC2)
             finally:
                 plc._syncing = False
         time.sleep(0.1)
@@ -209,7 +208,6 @@ async def run_modbus_server():
     store = ModbusSlaveContext(di=di_block, co=co_block, hr=hr_block, ir=ir_block)
     context = ModbusServerContext(slaves=store, single=True)
     
-    # Start background synchronization
     threading.Thread(target=sync_modbus_registers, args=(store,), daemon=True).start()
     
     identity = ModbusDeviceIdentification()
@@ -237,7 +235,6 @@ async def run_opcua_server():
     uri = "http://codesys.raspberrypi.honeypot"
     idx = await server.register_namespace(uri)
     
-    # Create Objects and Variables
     objects = server.nodes.objects
     plc_obj = await objects.add_object(idx, "CODESYS_RaspberryPi_PLC")
     
@@ -274,184 +271,410 @@ async def run_opcua_server():
             await var_alarm.write_value(alarm)
             await asyncio.sleep(0.5)
 
-# ── WebVisu Web Interface (Port 8080) ─────────────────────────────────────────
+# ── Industrial WebVisu Monochrome Interface (Port 8080) ──────────────────────
 app = Flask("CODESYS_WebVisu")
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CODESYS Control for Raspberry Pi — WebVisu HMI</title>
+    <title>CODESYS WebVisu — Raspberry Pi 4B Industrial Node</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #0f172a; color: #f8fafc; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #334155; }
-        .logo { font-size: 24px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 10px; }
-        .badge { background: #0284c7; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .badge-live { background: #16a34a; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
-        .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .card-title { font-size: 14px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 10px; }
-        .value { font-size: 36px; font-weight: bold; color: #38bdf8; }
-        .unit { font-size: 16px; color: #64748b; font-weight: normal; }
-        .alarm { color: #ef4444 !important; }
-        .controls { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 14px; color: #cbd5e1; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: #334155; }
-        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #1d4ed8; }
-        .btn-danger { background: #dc2626; }
-        .btn-danger:hover { background: #b91c1c; }
-        .logs-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-        .logs-table th, .logs-table td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; }
-        .logs-table th { color: #94a3b8; background: #0f172a; }
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-surface: #141414;
+            --bg-elevated: #1e1e1e;
+            --border-color: #2e2e2e;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-border: #444444;
+            --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            padding: 24px;
+            line-height: 1.4;
+        }
+
+        /* Top System Bar */
+        .system-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .system-title {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .system-meta {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Section Layout */
+        .grid-telemetry {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .telemetry-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+        }
+        .tag-name {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .tag-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .tag-value {
+            font-family: var(--font-mono);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .tag-unit {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        /* Control & Diagnostics Grid */
+        .grid-control {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 800px) {
+            .grid-control { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+        }
+        .panel-header {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 8px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #ffffff;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #ffffff;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 0;
+            transition: all 0.1s;
+        }
+        .btn:hover {
+            background: #cccccc;
+            border-color: #cccccc;
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-outline:hover {
+            background: var(--bg-elevated);
+            border-color: #666666;
+        }
+        .btn-block { width: 100%; }
+
+        /* Diagnostics Table */
+        .diag-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+        .diag-table td {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .diag-table td:last-child {
+            text-align: right;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .diag-table tr:last-child td { border-bottom: none; }
+
+        /* Event Log Table */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .log-table th {
+            text-align: left;
+            padding: 8px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+        .log-table td {
+            padding: 8px;
+            border-bottom: 1px solid #1c1c1c;
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">
-            <span>⚙️ CODESYS Control V3.5</span>
-            <span class="badge">Raspberry Pi 4B (4GB)</span>
-            <span class="badge badge-live">RUNTIME RUNNING</span>
+
+    <div class="system-bar">
+        <div class="system-title">
+            CODESYS CONTROL V3.5 // RASPBERRY PI 4B NODE
         </div>
-        <div>
-            <span style="color: #94a3b8;">IP: 192.168.1.8 | Modbus: 502 | OPC UA: 4840</span>
+        <div class="system-meta">
+            HOST: 192.168.1.8 | MODBUS: 502 | OPC-UA: 4840 | SCAN: 100ms
         </div>
     </div>
 
-    <div class="grid">
-        <div class="card">
-            <div class="card-title">Pipeline Pressure</div>
-            <div class="value" id="pressure">-- <span class="unit">PSI</span></div>
+    <!-- Process Telemetry -->
+    <div class="grid-telemetry">
+        <div class="telemetry-card">
+            <div class="tag-name">PT-101</div>
+            <div class="tag-desc">Pipeline Pressure</div>
+            <div class="tag-value"><span id="val_press">--</span><span class="tag-unit">PSI</span></div>
         </div>
-        <div class="card">
-            <div class="card-title">Volumetric Flow Rate</div>
-            <div class="value" id="flow_rate">-- <span class="unit">L/s</span></div>
+        <div class="telemetry-card">
+            <div class="tag-name">FT-101</div>
+            <div class="tag-desc">Volumetric Flow Rate</div>
+            <div class="tag-value"><span id="val_flow">--</span><span class="tag-unit">L/s</span></div>
         </div>
-        <div class="card">
-            <div class="card-title">Fluid Temperature</div>
-            <div class="value" id="temperature">-- <span class="unit">°C</span></div>
+        <div class="telemetry-card">
+            <div class="tag-name">TT-101</div>
+            <div class="tag-desc">Fluid Temperature</div>
+            <div class="tag-value"><span id="val_temp">--</span><span class="tag-unit">°C</span></div>
         </div>
-        <div class="card">
-            <div class="card-title">Pump Speed</div>
-            <div class="value" id="pump_rpm">-- <span class="unit">RPM</span></div>
+        <div class="telemetry-card">
+            <div class="tag-name">P-101</div>
+            <div class="tag-desc">Main Pump Speed</div>
+            <div class="tag-value"><span id="val_rpm">--</span><span class="tag-unit">RPM</span></div>
         </div>
-        <div class="card">
-            <div class="card-title">Valve Position</div>
-            <div class="value" id="valve_pos">-- <span class="unit">%</span></div>
+        <div class="telemetry-card">
+            <div class="tag-name">XV-101</div>
+            <div class="tag-desc">Outlet Valve Position</div>
+            <div class="tag-value"><span id="val_valve">--</span><span class="tag-unit">%</span></div>
         </div>
-        <div class="card">
-            <div class="card-title">PLC Scan Diagnostics</div>
-            <div style="font-size: 14px; line-height: 1.6; color: #cbd5e1;">
-                <div>Cycles: <strong id="scan_count">0</strong></div>
-                <div>Modbus Writes: <strong id="write_count">0</strong></div>
-                <div>Status: <span id="alarm_status" style="color: #22c55e; font-weight: bold;">NORMAL</span></div>
+    </div>
+
+    <!-- Controls and Diagnostics -->
+    <div class="grid-control">
+        <div class="panel">
+            <div class="panel-header">Process Setpoint Manipulation (IEC 61131-3)</div>
+            
+            <div class="form-row">
+                <div class="form-label">
+                    <span>P-101 Speed Demand</span>
+                    <span id="disp_rpm_slider">1200 RPM</span>
+                </div>
+                <input type="range" id="slider_rpm" min="0" max="3000" step="50" value="1200" oninput="document.getElementById('disp_rpm_slider').innerText = this.value + ' RPM'">
+                <button class="btn btn-outline" onclick="applyRPM()">Apply RPM Setpoint</button>
+            </div>
+
+            <div class="form-row" style="margin-top: 20px;">
+                <div class="form-label">
+                    <span>XV-101 Valve Demand</span>
+                    <span id="disp_valve_slider">60%</span>
+                </div>
+                <input type="range" id="slider_valve" min="0" max="100" step="1" value="60" oninput="document.getElementById('disp_valve_slider').innerText = this.value + '%'">
+                <button class="btn btn-outline" onclick="applyValve()">Apply Valve Setpoint</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">PLC Controller Status</div>
+            
+            <table class="diag-table">
+                <tr>
+                    <td style="color: var(--text-secondary);">Operating State</td>
+                    <td id="diag_state">RUNNING</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">Interlock Alarm</td>
+                    <td id="diag_alarm">NORMAL</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">Scan Count</td>
+                    <td id="diag_scans">0</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">Modbus Write Operations</td>
+                    <td id="diag_writes">0</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">Emergency Stop Relay</td>
+                    <td id="diag_estop">DE-ASSERTED</td>
+                </tr>
+            </table>
+
+            <div style="margin-top: 24px;">
+                <button class="btn btn-block" onclick="toggleEstop()" id="btn_estop">TOGGLE EMERGENCY STOP</button>
             </div>
         </div>
     </div>
 
-    <div class="controls">
-        <div class="card">
-            <div class="card-title">Manual Process Setpoints (WebVisu)</div>
-            <div class="form-group">
-                <label>Pump RPM Setpoint: <span id="rpm_val">1200</span> RPM</label>
-                <input type="range" id="rpm_slider" min="0" max="3000" step="50" value="1200" oninput="document.getElementById('rpm_val').innerText = this.value">
-                <button onclick="setRPM()" style="margin-top: 10px;">Apply RPM</button>
-            </div>
-            <div class="form-group">
-                <label>Valve Position Setpoint: <span id="valve_val">60</span>%</label>
-                <input type="range" id="valve_slider" min="0" max="100" step="1" value="60" oninput="document.getElementById('valve_val').innerText = this.value">
-                <button onclick="setValve()" style="margin-top: 10px;">Apply Valve</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Safety & Interlock Control</div>
-            <p style="color: #94a3b8; font-size: 14px; margin-bottom: 15px;">
-                Emergency Stop shuts down the pump immediately and triggers an alarm broadcast over Modbus and OPC UA.
-            </p>
-            <button class="btn-danger" style="width: 100%; padding: 15px; font-size: 16px;" onclick="toggleEstop()">🚨 EMERGENCY STOP / RESET</button>
-        </div>
-    </div>
-
-    <div class="card" style="margin-top: 20px;">
-        <div class="card-title">Live PLC Command & Event Log</div>
-        <table class="logs-table">
+    <!-- Event & Attack Log -->
+    <div class="panel">
+        <div class="panel-header">Command & Telemetry Audit Log</div>
+        <table class="log-table">
             <thead>
                 <tr>
-                    <th>Timestamp (UTC)</th>
-                    <th>Event Type</th>
-                    <th>Details</th>
+                    <th style="width: 180px;">Timestamp (UTC)</th>
+                    <th style="width: 180px;">Event Category</th>
+                    <th>Parameters & Execution Details</th>
                 </tr>
             </thead>
-            <tbody id="logs_body">
-                <tr><td colspan="3">Loading events...</td></tr>
+            <tbody id="log_body">
+                <tr><td colspan="3" style="color: var(--text-muted);">Polling audit log...</td></tr>
             </tbody>
         </table>
     </div>
 
     <script>
-        async function fetchStatus() {
+        async function updateStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
-                document.getElementById('pressure').innerHTML = data.pressure.toFixed(1) + ' <span class="unit">PSI</span>';
-                if (data.pressure > 150) document.getElementById('pressure').classList.add('alarm');
-                else document.getElementById('pressure').classList.remove('alarm');
 
-                document.getElementById('flow_rate').innerHTML = data.flow_rate.toFixed(1) + ' <span class="unit">L/s</span>';
-                document.getElementById('temperature').innerHTML = data.temperature.toFixed(1) + ' <span class="unit">°C</span>';
-                document.getElementById('pump_rpm').innerHTML = Math.round(data.pump_rpm) + ' <span class="unit">RPM</span>';
-                document.getElementById('valve_pos').innerHTML = (data.valve_pos * 100).toFixed(0) + ' <span class="unit">%</span>';
-                document.getElementById('scan_count').innerText = data.scan_count;
-                document.getElementById('write_count').innerText = data.modbus_write_count;
+                document.getElementById('val_press').innerText = data.pressure.toFixed(1);
+                document.getElementById('val_flow').innerText = data.flow_rate.toFixed(1);
+                document.getElementById('val_temp').innerText = data.temperature.toFixed(1);
+                document.getElementById('val_rpm').innerText = Math.round(data.pump_rpm);
+                document.getElementById('val_valve').innerText = Math.round(data.valve_pos * 100);
 
-                const alarmEl = document.getElementById('alarm_status');
+                document.getElementById('diag_scans').innerText = data.scan_count;
+                document.getElementById('diag_writes').innerText = data.modbus_write_count;
+
+                const alarmEl = document.getElementById('diag_alarm');
                 if (data.emergency_stop === 1) {
-                    alarmEl.innerText = '🚨 EMERGENCY TRIP';
-                    alarmEl.style.color = '#ef4444';
+                    alarmEl.innerText = 'TRIP (EMERGENCY STOP)';
                 } else if (data.alarm_high_pressure) {
-                    alarmEl.innerText = '⚠️ HIGH PRESSURE ALARM';
-                    alarmEl.style.color = '#f59e0b';
+                    alarmEl.innerText = 'ALARM (HIGH PRESSURE)';
+                } else if (data.alarm_overheat) {
+                    alarmEl.innerText = 'ALARM (OVERHEAT)';
                 } else {
-                    alarmEl.innerText = '✅ NORMAL OPERATION';
-                    alarmEl.style.color = '#22c55e';
+                    alarmEl.innerText = 'NORMAL';
                 }
 
-                // Update logs
-                let html = '';
-                data.event_log.slice(0, 10).forEach(e => {
-                    html += `<tr><td>${e.time}</td><td><strong>${e.type}</strong></td><td>${e.details}</td></tr>`;
+                document.getElementById('diag_estop').innerText = (data.emergency_stop === 1) ? 'ASSERTED (ACTIVE)' : 'DE-ASSERTED';
+
+                // Render Event Logs
+                let rows = '';
+                (data.event_log || []).slice(0, 10).forEach(entry => {
+                    rows += `<tr>
+                        <td style="font-family: var(--font-mono); color: var(--text-secondary);">${entry.time}</td>
+                        <td style="font-family: var(--font-mono);">${entry.type}</td>
+                        <td>${entry.details}</td>
+                    </tr>`;
                 });
-                document.getElementById('logs_body').innerHTML = html;
-            } catch(e) {
-                console.error(e);
+                document.getElementById('log_body').innerHTML = rows || '<tr><td colspan="3">No events recorded.</td></tr>';
+
+            } catch (err) {
+                console.error(err);
             }
         }
 
-        async function setRPM() {
-            const val = document.getElementById('rpm_slider').value;
-            await fetch('/api/set_rpm', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({rpm: parseFloat(val)}) });
-            fetchStatus();
+        async function applyRPM() {
+            const val = parseFloat(document.getElementById('slider_rpm').value);
+            await fetch('/api/set_rpm', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({rpm: val})
+            });
+            updateStatus();
         }
 
-        async function setValve() {
-            const val = document.getElementById('valve_slider').value;
-            await fetch('/api/set_valve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({valve: parseFloat(val)/100.0}) });
-            fetchStatus();
+        async function applyValve() {
+            const val = parseFloat(document.getElementById('slider_valve').value) / 100.0;
+            await fetch('/api/set_valve', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({valve: val})
+            });
+            updateStatus();
         }
 
         async function toggleEstop() {
             await fetch('/api/toggle_estop', { method: 'POST' });
-            fetchStatus();
+            updateStatus();
         }
 
-        setInterval(fetchStatus, 500);
-        fetchStatus();
+        setInterval(updateStatus, 500);
+        updateStatus();
     </script>
 </body>
 </html>
@@ -484,7 +707,7 @@ def set_rpm():
     data = request.get_json(force=True)
     with plc.lock:
         plc.pump_rpm = max(0.0, min(3000.0, float(data.get("rpm", 1200.0))))
-        plc.log_event("WEBVISU_COMMAND", f"Pump RPM setpoint changed to {plc.pump_rpm}")
+        plc.log_event("OPERATOR_SETPOINT", f"P-101 speed demand set to {plc.pump_rpm:.0f} RPM")
     return jsonify({"status": "ok", "pump_rpm": plc.pump_rpm})
 
 @app.route("/api/set_valve", methods=["POST"])
@@ -492,14 +715,15 @@ def set_valve():
     data = request.get_json(force=True)
     with plc.lock:
         plc.valve_pos = max(0.0, min(1.0, float(data.get("valve", 0.6))))
-        plc.log_event("WEBVISU_COMMAND", f"Valve Position setpoint changed to {plc.valve_pos*100:.1f}%")
+        plc.log_event("OPERATOR_SETPOINT", f"XV-101 position demand set to {plc.valve_pos*100:.1f}%")
     return jsonify({"status": "ok", "valve_pos": plc.valve_pos})
 
 @app.route("/api/toggle_estop", methods=["POST"])
 def toggle_estop():
     with plc.lock:
         plc.emergency_stop = 0 if plc.emergency_stop == 1 else 1
-        plc.log_event("WEBVISU_COMMAND", f"Emergency Stop toggled: {plc.emergency_stop}")
+        state_str = "TRIPPED (ASSERTED)" if plc.emergency_stop == 1 else "RESET (DE-ASSERTED)"
+        plc.log_event("SAFETY_INTERLOCK", f"Manual Emergency Stop {state_str}")
     return jsonify({"status": "ok", "emergency_stop": plc.emergency_stop})
 
 def run_webvisu():
@@ -510,10 +734,10 @@ def run_webvisu():
 def main():
     logger.info("Initializing CODESYS SoftPLC Engine for Raspberry Pi 4B...")
     
-    # Start IEC Scan Cycle in background thread
+    # Start IEC Scan Cycle
     threading.Thread(target=iec_scan_cycle, daemon=True).start()
     
-    # Start WebVisu HMI in background thread
+    # Start WebVisu HMI
     threading.Thread(target=run_webvisu, daemon=True).start()
     
     # Start Async Event Loop for Modbus and OPC UA
