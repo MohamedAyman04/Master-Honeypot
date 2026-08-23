@@ -255,6 +255,38 @@ For each test scenario:
 
 ---
 
+## Raspberry Pi 4B Hardware Integration & CODESYS SoftPLC
+
+The Master-Honeypot supports integrating physical hardware PLCs running CODESYS on a Raspberry Pi 4B (4GB, IP: `192.168.1.8`, Debian 13 trixie ARM64).
+
+### Architecture & Service Ports on Raspberry Pi (`192.168.1.8`)
+
+- **Modbus TCP Server (`:502`)**: Standard industrial fieldbus server exposing oil pipeline process registers.
+- **OPC UA Server (`:4840`)**: `opc.tcp://192.168.1.8:4840/codesys/server/` for Level-3 SCADA integration.
+- **WebVisu Operator HMI (`:8080`)**: `http://192.168.1.8:8080` real-time operator interface with manual controls & event log.
+- **Systemd Unit**: `codesys-plc.service` manages automatic startup on boot.
+
+### Dual Operating Modes
+
+1. **Pure Simulation Mode (Default)**: Uses internal container `plc_simulator` (`PLC_IP=plc_simulator` in `.env`).
+2. **Hardware Mode (Raspberry Pi CODESYS PLC)**:
+   Set `PLC_IP=192.168.1.8` in `.env`, or run the hardware bridge:
+   ```bash
+   # Start the hardware telemetry & physics synchronization bridge
+   python scripts/raspberry_pi_bridge.py
+   ```
+
+### Verification & Testing
+
+```bash
+# Run automated Raspberry Pi & CODESYS integration test suite
+python scripts/test_raspberry_pi_integration.py
+```
+
+See [`codesys_pi/CODESYS_IDE_GUIDE.md`](codesys_pi/CODESYS_IDE_GUIDE.md) for instructions on deploying IEC 61131-3 logic directly from the Windows CODESYS Development System (V3.5) IDE.
+
+---
+
 ## Stopping the Deployment
 
 ```bash
@@ -276,3 +308,5 @@ docker compose down -v
 | attacker_node takes too long to build | Use `--no-cache` or pre-pull `kalilinux/kali-rolling` |
 | Grafana shows no data | Wait 3 min for first pipeline_metrics to accumulate |
 | historian_api can't reach ml_engine | Both need `monitor-net` — check `docker compose ps` |
+| Raspberry Pi SoftPLC service down | SSH to Pi and check `sudo systemctl status codesys-plc` |
+| WebVisu not accessible | Ensure port 8080 is open on Pi and navigate to `http://192.168.1.8:8080` |

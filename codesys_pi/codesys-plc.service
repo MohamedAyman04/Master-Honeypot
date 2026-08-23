@@ -1,0 +1,17 @@
+[Unit]
+Description=CODESYS SoftPLC Runtime for Raspberry Pi 4B (Master-Honeypot)
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/mohamed-ayman/codesys_runtime
+ExecStart=/home/mohamed-ayman/codesys_env/bin/python /home/mohamed-ayman/codesys_runtime/codesys_softplc.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
