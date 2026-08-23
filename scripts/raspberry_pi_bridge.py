@@ -24,7 +24,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 # Configuration
-PI_HOST = os.getenv("RPI_HOST", "192.168.1.8")
+PI_HOST = os.getenv("RPI_HOST", "172.20.10.8")
 PI_MODBUS_PORT = int(os.getenv("RPI_MODBUS_PORT", 502))
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))

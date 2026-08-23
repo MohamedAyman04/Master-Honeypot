@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PI_IP="192.168.1.8"
+PI_IP="${1:-${PI_IP:-172.20.10.8}}"
 PI_USER="mohamed-ayman"
 PI_PASS="mohamed2004"
 

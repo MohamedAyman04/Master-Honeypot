@@ -1,6 +1,6 @@
 # CODESYS Development System V3.5 — Raspberry Pi 4B Setup & Connection Guide
 
-This guide explains how to connect to the physical **Raspberry Pi 4B (192.168.1.8)** from the **CODESYS Development System (V3.5)** running on Windows/PC, deploy IEC 61131-3 logic (Ladder Logic / Structured Text / FBD), and integrate with the Master-Honeypot.
+This guide explains how to connect to the physical **Raspberry Pi 4B (172.20.10.8)** from the **CODESYS Development System (V3.5)** running on Windows/PC, deploy IEC 61131-3 logic (Ladder Logic / Structured Text / FBD), and integrate with the Master-Honeypot.
 
 ---
 
@@ -8,12 +8,12 @@ This guide explains how to connect to the physical **Raspberry Pi 4B (192.168.1.
 
 | Parameter | Value |
 |---|---|
-| **IP Address** | `192.168.1.8` |
+| **IP Address** | `172.20.10.8` |
 | **SSH User** | `mohamed-ayman` |
 | **SSH Password** | `mohamed2004` |
 | **Modbus TCP Port** | `502` |
-| **OPC UA Server** | `opc.tcp://192.168.1.8:4840/codesys/server/` |
-| **WebVisu HMI** | `http://192.168.1.8:8080` |
+| **OPC UA Server** | `opc.tcp://172.20.10.8:4840/codesys/server/` |
+| **WebVisu HMI** | `http://172.20.10.8:8080` |
 | **Operating System** | Debian 13 (trixie, aarch64 64-bit) |
 | **RAM / Hardware** | 4GB RAM, Cortex-A72 Quad-Core |
 
@@ -33,14 +33,14 @@ To deploy your own custom IEC 61131-3 programs directly from CODESYS IDE:
 1. Open **CODESYS V3.5 SP19 / SP20** on Windows.
 2. In the top menu, navigate to **Tools** → **Update Raspberry Pi** (or **CODESYS Control for Linux ARM64 SL**).
 3. Enter:
-   - **IP address:** `192.168.1.8`
+   - **IP address:** `172.20.10.8`
    - **User:** `mohamed-ayman`
    - **Password:** `mohamed2004`
 4. Click **Install / Update**. CODESYS IDE will deploy the native Linux ARM64 runtime package (`codesyscontrol_arm64.deb`) over SSH.
 5. In your CODESYS Project:
    - Device: Select `CODESYS Control for Linux ARM64 SL` (or `CODESYS Control for Raspberry Pi 64 SL`).
    - Double-click `Device (CODESYS Control...)` → **Communication Settings**.
-   - Click **Scan Network...** → Select `192.168.1.8 [0001]`.
+   - Click **Scan Network...** → Select `172.20.10.8 [0001]`.
    - Click **Online** → **Login** (Alt+F8) → **Run** (F5).
 
 ---
@@ -64,7 +64,7 @@ To deploy your own custom IEC 61131-3 programs directly from CODESYS IDE:
 
 Open your browser to:
 ```
-http://192.168.1.8:8080
+http://172.20.10.8:8080
 ```
 This displays the real-time SCADA operator screen with live dials, pressure/flow telemetry, interactive sliders for manual pump/valve control, E-Stop button, and live Modbus/OPC UA access logs.
 
@@ -79,5 +79,5 @@ To run the Master-Honeypot with the Raspberry Pi hardware PLC:
 python scripts/raspberry_pi_bridge.py
 
 # 2. Run automated test suite
-python scripts/test_raspberry_pi_integration.py
+python scripts/test_raspberry_pi_integration.py --host 172.20.10.8
 ```
