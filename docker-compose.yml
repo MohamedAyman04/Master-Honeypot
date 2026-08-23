@@ -393,7 +393,7 @@ services:
   # ── Story Logger (cross-level narrative log) ───────────────────────────────
   story_logger:
     build:
-      context: ../Industrial-honeypot/story_logger
+      context: ./story_logger
       dockerfile: Dockerfile
     container_name: story_logger_l2
     ports:
