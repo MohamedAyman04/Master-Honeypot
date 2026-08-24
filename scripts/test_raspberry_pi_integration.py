@@ -243,8 +243,99 @@ def test_modbus_coils():
     finally:
         client.close()
 
+# ── S7comm (Siemens S7-300 DB1) Client ───────────────────────────────────────
+def test_s7comm():
+    print_header(f"Test 5: Siemens S7comm Read DB1 ({PI_HOST}:102)")
+    try:
+        t0 = time.time()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(3.0)
+        s.connect((PI_HOST, 102))
+
+        # 1. COTP Connection Request
+        cotp_cr = bytes.fromhex('0300001611e00000000100c0010ac1020100c2020102')
+        s.sendall(cotp_cr)
+        cc = s.recv(1024)
+        if len(cc) < 7:
+            raise RuntimeError("COTP Connection Confirm failed")
+
+        # 2. S7 Setup Communication
+        s7_setup = bytes.fromhex('0300001902f08032010000000100080000f0000001000101e0')
+        s.sendall(s7_setup)
+        setup_ack = s.recv(1024)
+        if len(setup_ack) < 12:
+            raise RuntimeError("S7 Setup Communication failed")
+
+        # 3. S7 Read DB1 (16 bytes: Pressure, Temp, Flow, RPM)
+        s7_read = bytes.fromhex('0300001f02f080320100000002000e00000401120a10020010000184000000')
+        s.sendall(s7_read)
+        data_resp = s.recv(1024)
+        elapsed = (time.time() - t0) * 1000
+        s.close()
+
+        if len(data_resp) >= 41:
+            payload = data_resp[25:41]
+            press, temp, flow, rpm = struct.unpack('>ffff', payload)
+            print(f"  [PASS] ISO-on-TCP COTP + S7comm Read DB1 in {elapsed:.1f}ms:")
+            print(f"         - DB1.DBD0  (Pressure)    : {press:.2f} PSI")
+            print(f"         - DB1.DBD4  (Temperature) : {temp:.2f} °C")
+            print(f"         - DB1.DBD8  (Flow Rate)   : {flow:.2f} L/s")
+            print(f"         - DB1.DBD12 (Pump RPM)    : {rpm:.0f} RPM")
+            return True
+        else:
+            print(f"  [FAIL] S7comm response truncated ({len(data_resp)} bytes)")
+            return False
+    except Exception as e:
+        print(f"  [FAIL] S7comm port 102 error: {e}")
+        return False
+
+# ── DNP3 Link Layer Client ───────────────────────────────────────────────────
+def dnp3_crc(data: bytes) -> int:
+    table = getattr(dnp3_crc, "_table", None)
+    if table is None:
+        table = []
+        for i in range(256):
+            crc = i
+            for _ in range(8):
+                crc = (crc >> 1) ^ 0xA6BC if (crc & 1) else (crc >> 1)
+            table.append(crc)
+        dnp3_crc._table = table
+    crc = 0x0000
+    for b in data:
+        crc = table[(crc ^ b) & 0xFF] ^ (crc >> 8)
+    return (~crc) & 0xFFFF
+
+def test_dnp3():
+    print_header(f"Test 6: DNP3 Protocol Handshake & Frame Validation ({PI_HOST}:20000)")
+    try:
+        t0 = time.time()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(3.0)
+        s.connect((PI_HOST, 20000))
+
+        # DNP3 Link Layer Request Frame
+        raw_req = bytes([0x05, 0x64, 0x05, 0x40, 0x01, 0x00, 0x03, 0x00])
+        req = raw_req + struct.pack('<H', dnp3_crc(raw_req))
+        s.sendall(req)
+        resp = s.recv(1024)
+        elapsed = (time.time() - t0) * 1000
+        s.close()
+
+        if len(resp) >= 10 and resp[0] == 0x05 and resp[1] == 0x64:
+            print(f"  [PASS] DNP3 Link-Layer Request/ACK Handshake succeeded in {elapsed:.1f}ms:")
+            print(f"         - Sent Frame     : {req.hex()} (Len: {len(req)})")
+            print(f"         - Received ACK   : {resp.hex()} (Len: {len(resp)})")
+            return True
+        else:
+            print(f"  [FAIL] Invalid DNP3 response: {resp.hex() if resp else 'None'}")
+            return False
+    except Exception as e:
+        print(f"  [FAIL] DNP3 port 20000 error: {e}")
+        return False
+
+# ── OPC UA Client ────────────────────────────────────────────────────────────
 def test_opcua():
-    print_header(f"Test 5: OPC UA Protocol Handshake & Endpoint ({PI_HOST}:{OPCUA_PORT})")
+    print_header(f"Test 7: OPC UA Protocol Handshake & Endpoint ({PI_HOST}:{OPCUA_PORT})")
     endpoint_url = f"opc.tcp://{PI_HOST}:{OPCUA_PORT}/codesys/server/"
     
     # Check TCP socket connectivity and OPC UA Hello/Acknowledge handshake
@@ -252,15 +343,6 @@ def test_opcua():
         t0 = time.time()
         s = socket.create_connection((PI_HOST, OPCUA_PORT), timeout=3.0)
         
-        # OPC UA Binary HEL Message:
-        # Header (8 bytes): Type b'HELF' (4B), MessageSize (uint32, 4B)
-        # Payload (24 bytes + string):
-        #   ProtocolVersion (uint32, 4B) = 0
-        #   ReceiveBufferSize (uint32, 4B) = 65536
-        #   SendBufferSize (uint32, 4B) = 65536
-        #   MaxMessageSize (uint32, 4B) = 0
-        #   MaxChunkCount (uint32, 4B) = 0
-        #   EndpointUrl: Length (int32, 4B) + UTF-8 bytes
         ep_bytes = endpoint_url.encode('utf-8')
         body = struct.pack('<IIIIII', 0, 65536, 65536, 0, 0, len(ep_bytes)) + ep_bytes
         msg_size = 8 + len(body)
@@ -285,17 +367,19 @@ def test_opcua():
 
 def main():
     print("\n" + "#" * 70)
-    print("  MASTER-HONEYPOT <-> RASPBERRY PI 4B CODESYS INTEGRATION TEST")
+    print("  MASTER-HONEYPOT <-> RASPBERRY PI 4B INDUSTRIAL INTEGRATION TEST")
     print(f"  Target: {PI_HOST} (Debian 13 trixie ARM64)")
-    print(f"  Services: Modbus TCP ({MODBUS_PORT}), WebVisu ({WEBVISU_PORT}), OPC UA ({OPCUA_PORT})")
+    print(f"  Active Protocols: Modbus TCP (502), S7comm (102), DNP3 (20000), OPC UA (4840), WebVisu (8080)")
     print("#" * 70)
 
     results = []
-    results.append(("WebVisu HTTP & REST API", test_webvisu_http()))
-    results.append(("Modbus TCP Read Holding Regs", test_modbus_read()))
-    results.append(("Modbus TCP Write & Physics", test_modbus_write()))
-    results.append(("Modbus Coils & Interlocks", test_modbus_coils()))
-    results.append(("OPC UA Server & Handshake", test_opcua()))
+    results.append(("WebVisu HTTP & REST API (Port 8080)", test_webvisu_http()))
+    results.append(("Modbus TCP Read Holding Regs (Port 502)", test_modbus_read()))
+    results.append(("Modbus TCP Write & Physics (Port 502)", test_modbus_write()))
+    results.append(("Modbus Coils & Interlocks (Port 502)", test_modbus_coils()))
+    results.append(("Siemens S7comm DB1 Read (Port 102)", test_s7comm()))
+    results.append(("DNP3 Frame & Handshake (Port 20000)", test_dnp3()))
+    results.append(("OPC UA Server & Handshake (Port 4840)", test_opcua()))
 
     print_header("SUMMARY OF RESULTS")
     all_passed = True
@@ -307,8 +391,8 @@ def main():
 
     print("\n" + "=" * 70)
     if all_passed:
-        print("  >>> ALL INTEGRATION TESTS PASSED SUCCESSFULLY! <<<")
-        print(f"  Raspberry Pi 4B ({PI_HOST}) is fully verified & operational.")
+        print("  >>> ALL MULTI-PROTOCOL INTEGRATION TESTS PASSED! <<<")
+        print(f"  Raspberry Pi 4B ({PI_HOST}) is running 5/5 industrial protocols.")
     else:
         print("  >>> SOME TESTS FAILED. CHECK DETAILS ABOVE. <<<")
     print("=" * 70 + "\n")

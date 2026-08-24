@@ -28,6 +28,9 @@ import asyncio
 from datetime import datetime, timezone
 from flask import Flask, jsonify, render_template_string, request
 
+import socket
+import struct
+
 # Modbus Libraries
 from pymodbus.server import StartAsyncTcpServer
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
@@ -39,6 +42,22 @@ try:
     OPCUA_AVAILABLE = True
 except ImportError:
     OPCUA_AVAILABLE = False
+
+# Siemens S7comm Libraries
+try:
+    import snap7.server
+    try:
+        from snap7.type import SrvArea
+        srv_area_db = SrvArea.DB
+    except (ImportError, AttributeError):
+        try:
+            from snap7.types import srvAreaDB
+            srv_area_db = srvAreaDB
+        except ImportError:
+            srv_area_db = 0x04
+    SNAP7_AVAILABLE = True
+except ImportError:
+    SNAP7_AVAILABLE = False
 
 # Logging Configuration
 logging.basicConfig(
@@ -292,6 +311,90 @@ async def run_opcua_server():
             await var_alarm.write_value(alarm)
             await asyncio.sleep(0.5)
 
+# ── Siemens S7comm Server (Port 102 - Emulating S7-300 DB1) ───────────────────
+def run_s7_server():
+    if not SNAP7_AVAILABLE:
+        logger.warning("snap7 not available; skipping Siemens S7comm server.")
+        return
+    try:
+        server = snap7.server.Server()
+        db_data = bytearray(100)
+        server.register_area(srv_area_db, 1, db_data)
+        server.start(102)
+        logger.info("Starting Siemens S7comm Honeypot Server on 0.0.0.0:102 (DB1)...")
+        
+        while True:
+            with plc.lock:
+                p_press = float(plc.pressure)
+                p_temp = float(plc.temperature)
+                p_flow = float(plc.flow_rate)
+                p_rpm = float(plc.pump_rpm)
+                p_estop = int(plc.emergency_stop)
+                p_alarm = bool(plc.alarm_high_pressure)
+                
+            struct.pack_into(">f", db_data, 0, p_press)    # DB1.DBD0 (REAL Pressure)
+            struct.pack_into(">f", db_data, 4, p_temp)     # DB1.DBD4 (REAL Temperature)
+            struct.pack_into(">f", db_data, 8, p_flow)     # DB1.DBD8 (REAL Flow Rate)
+            struct.pack_into(">f", db_data, 12, p_rpm)     # DB1.DBD12 (REAL Pump RPM)
+            db_data[16] = (p_estop & 1) | ((1 if p_alarm else 0) << 1) # DB1.DBB16
+            time.sleep(0.5)
+    except Exception as e:
+        logger.error(f"S7comm server error: {e}")
+
+# ── DNP3 Honeypot Server (Port 20000) ─────────────────────────────────────────
+def dnp3_crc(data: bytes) -> int:
+    crc_table = getattr(dnp3_crc, "_table", None)
+    if crc_table is None:
+        crc_table = []
+        for i in range(256):
+            crc = i
+            for _ in range(8):
+                crc = (crc >> 1) ^ 0xA6BC if (crc & 1) else (crc >> 1)
+            crc_table.append(crc)
+        dnp3_crc._table = crc_table
+    crc = 0x0000
+    for b in data:
+        crc = crc_table[(crc ^ b) & 0xFF] ^ (crc >> 8)
+    return (~crc) & 0xFFFF
+
+def build_dnp3_ack(src_addr: int = 1, dst_addr: int = 3) -> bytes:
+    raw = bytes([0x05, 0x64, 0x05, 0x00, dst_addr & 0xFF, (dst_addr >> 8) & 0xFF, src_addr & 0xFF, (src_addr >> 8) & 0xFF])
+    return raw + struct.pack('<H', dnp3_crc(raw))
+
+def handle_dnp3_client(conn: socket.socket, addr: tuple):
+    ip, port = addr
+    try:
+        conn.settimeout(20)
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            plc.log_event("DNP3_PROBE", f"DNP3 frame ({len(data)}b) from {ip}:{port}")
+            if len(data) >= 10 and data[0] == 0x05 and data[1] == 0x64:
+                src = struct.unpack('<H', data[6:8])[0]
+                resp = build_dnp3_ack(src_addr=1, dst_addr=src)
+                conn.sendall(resp)
+    except Exception:
+        pass
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def run_dnp3_server():
+    try:
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("0.0.0.0", 20000))
+        srv.listen(10)
+        logger.info("Starting DNP3 Honeypot Server on 0.0.0.0:20000...")
+        while True:
+            conn, addr = srv.accept()
+            threading.Thread(target=handle_dnp3_client, args=(conn, addr), daemon=True).start()
+    except Exception as e:
+        logger.error(f"DNP3 server error: {e}")
+
 # ── Industrial WebVisu Monochrome Interface (Port 8080) ──────────────────────
 app = Flask("CODESYS_WebVisu")
 
@@ -514,7 +617,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             CODESYS CONTROL V3.5 // RASPBERRY PI 4B NODE
         </div>
         <div class="system-meta">
-            HOST: 192.168.1.8 | MODBUS: 502 | OPC-UA: 4840 | SCAN: 100ms
+            MODBUS: 502 | S7COMM: 102 | DNP3: 20000 | OPC-UA: 4840 | SCAN: 100ms
         </div>
     </div>
 
@@ -754,6 +857,12 @@ def main():
     
     # Start WebVisu HMI
     threading.Thread(target=run_webvisu, daemon=True).start()
+    
+    # Start Siemens S7comm Server (Port 102)
+    threading.Thread(target=run_s7_server, daemon=True).start()
+    
+    # Start DNP3 Honeypot Server (Port 20000)
+    threading.Thread(target=run_dnp3_server, daemon=True).start()
     
     # Start Async Event Loop for Modbus and OPC UA
     loop = asyncio.new_event_loop()
