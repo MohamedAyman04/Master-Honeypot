@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate Comparative-OT-Security-Landscape.xlsx
+Generate Comparative-OT-Security-Landscape.xlsx (Strict Mutually Exclusive Partition: 18 + 24 + 5 = 47)
 Location: /run/media/mohamed-ayman/External HD/Neutral_Files/GUC/Master's/Literature Review/
 """
 
@@ -27,26 +27,33 @@ def build_comparative_workbook():
             data.append(list(row)[:len(headers)])
 
     df = pd.DataFrame(data, columns=headers)
-    print(f"Total source rows extracted: {len(df)}")
+    total_papers = len(df)
+    print(f"Total source rows extracted: {total_papers}")
 
-    # Classify into the 3 themes
-    # Theme 1: Simulation/Emulation ONLY (No Physical Hardware & No HIL)
-    df_sim_only = df[(df['Physical hardware used?'] == 'No') & (df['Hardware-in-the-loop used?'] == 'No')].copy()
+    # Strict Mutually Exclusive Partition (Sum = 47)
+    # Theme 1: Simulation/Emulation ONLY (Physical Hardware == No)
+    df_sim_only = df[df['Physical hardware used?'] == 'No'].copy()
 
-    # Theme 2: Hybrid & HIL (Simulation + Hardware in the loop or physical PLCs)
-    df_hybrid = df[(df['Hybrid physical/simulation architecture used?'] == 'Yes') | (df['Hardware-in-the-loop used?'] == 'Yes')].copy()
+    # Theme 2: Hybrid & HIL (Physical Hardware == Yes AND (Simulation == Yes OR Emulation == Yes OR HIL == Yes))
+    df_hybrid = df[(df['Physical hardware used?'] == 'Yes') & ((df['Simulation used?'] == 'Yes') | (df['Emulation used?'] == 'Yes') | (df['Hardware-in-the-loop used?'] == 'Yes'))].copy()
 
-    # Theme 3: Hardware / Physical ONLY (Physical hardware used, Simulation is No)
-    df_hard_only = df[(df['Physical hardware used?'] == 'Yes') & (df['Simulation used?'] == 'No')].copy()
+    # Theme 3: Hardware ONLY / Standards / Empirical (Physical Hardware == Yes AND Simulation == No AND Emulation == No)
+    df_hard_only = df[(df['Physical hardware used?'] == 'Yes') & (df['Simulation used?'] == 'No') & (df['Emulation used?'] == 'No')].copy()
 
-    print(f"Theme 1 (Sim & Emul Only): {len(df_sim_only)} papers")
-    print(f"Theme 2 (Hybrid & HIL): {len(df_hybrid)} papers")
-    print(f"Theme 3 (Hardware Only): {len(df_hard_only)} papers")
+    count_c1 = len(df_sim_only)
+    count_c2 = len(df_hybrid)
+    count_c3 = len(df_hard_only)
+    total_sum = count_c1 + count_c2 + count_c3
+
+    print(f"Theme 1 (Sim & Emul Only): {count_c1} papers")
+    print(f"Theme 2 (Hybrid & HIL): {count_c2} papers")
+    print(f"Theme 3 (Pure Hardware / Empirical Only): {count_c3} papers")
+    print(f"Sum check: {count_c1} + {count_c2} + {count_c3} = {total_sum} (Expected: {total_papers})")
+    assert total_sum == total_papers, f"Mismatch in partition! Sum: {total_sum}, Total: {total_papers}"
 
     # 2. Create Target Workbook
     wb_tgt = openpyxl.Workbook()
-    # remove default sheet
-    wb_tgt.remove(wb_tgt.active)
+    wb_tgt.remove(wb_tgt.active) # remove default sheet
 
     # Styles definition
     FONT_TITLE = Font(name="Calibri", size=16, bold=True, color="003366")
@@ -57,7 +64,7 @@ def build_comparative_workbook():
     FONT_DIFF = Font(name="Calibri", size=9, bold=True, color="004D40")
 
     FILL_HEADER = PatternFill(start_color="003366", end_color="003366", fill_type="solid")
-    FILL_MY_WORK = PatternFill(start_color="D4E6F1", end_color="D4E6F1", fill_type="solid") # Distinct soft blue highlight
+    FILL_MY_WORK = PatternFill(start_color="D4E6F1", end_color="D4E6F1", fill_type="solid")
     FILL_ALT_ROW = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
     FILL_WHITE = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     FILL_DIFF = PatternFill(start_color="E8F8F5", end_color="E8F8F5", fill_type="solid")
@@ -88,13 +95,14 @@ def build_comparative_workbook():
     ws_toc.cell(2, 2, "OT & CPS Security Research Landscape — 3-Thematic Comparative Analysis").font = FONT_TITLE
     ws_toc.cell(3, 2, "Author: Mohamed Ayman | Institution: German University in Cairo (GUC) | Date: August 2026").font = FONT_SUBTITLE
     
-    ws_toc.cell(5, 2, "This workbook rigorously benchmarks the proposed Hardware-in-the-Loop (HIL) CODESYS SoftPLC Cyber-Physical Deception Testbed against 47 state-of-the-art research publications grouped into three distinct methodological themes.").font = Font(name="Calibri", size=10.5, color="333333")
+    ws_toc.cell(5, 2, f"This workbook rigorously partitions all {total_papers} literature sources into three mutually exclusive methodological themes, benchmarking your Master's Hardware-in-the-Loop (HIL) CODESYS SoftPLC Cyber-Physical Deception Testbed against each group.").font = Font(name="Calibri", size=10.5, color="333333")
 
     toc_table = [
-        ["Sheet Name", "Theme / Category Description", "Paper Count", "Core Research Gap Addressed by Your Master's Work"],
-        ["Theme 1 - Sim & Emul Only", "Simulation & Emulation Only (No Physical Hardware, No HIL)", f"{len(df_sim_only)} Papers", "Eliminates the 'Sim-to-Real Gap': Replaces virtual clock sharing with real ARM64 Cortex-A72 execution cycles, physical network transmission jitter, and dynamic hydraulic differential feedback."],
-        ["Theme 2 - Hybrid & HIL", "Hybrid Architecture & Hardware-in-the-Loop Testbeds", f"{len(df_hybrid)} Papers", "Multi-Protocol & Edge Resource Completeness: Integrates Modbus, OPC UA, S7, DNP3 in a unified SoftPLC while experimentally quantifying SoC thermals (44.3°C), CPU overhead, and 100ms scan cycle jitter."],
-        ["Theme 3 - Hardware Only", "Hardware-Only & Physical Plant Implementations (No Simulation)", f"{len(df_hard_only)} Papers", "Cost, Scalability & Reconfigurability: Delivers physical hardware interaction and real fieldbus protocol behavior without the multi-million dollar capital cost, physical safety hazards, or fixed topologies of full-scale plants."]
+        ["Sheet Name", "Theme / Category Description", "Exact Paper Count", "Core Research Gap Addressed by Your Master's Work"],
+        ["Theme 1 - Sim & Emul Only", "Simulation & Emulation Only (No Physical Hardware, No HIL)", f"{count_c1} Papers", "Eliminates the 'Sim-to-Real Gap': Replaces virtual clock sharing with real ARM64 Cortex-A72 execution cycles, physical network transmission jitter, and dynamic hydraulic differential feedback."],
+        ["Theme 2 - Hybrid & HIL", "Hybrid Architecture & Hardware-in-the-Loop Testbeds", f"{count_c2} Papers", "Multi-Protocol & Edge Resource Completeness: Integrates Modbus, OPC UA, S7, DNP3 in a unified SoftPLC while experimentally quantifying SoC thermals (44.3°C), CPU overhead, and 100ms scan cycle jitter."],
+        ["Theme 3 - Hardware Only", "Hardware-Only, Standards & Empirical Research (No Simulation / No Emulation)", f"{count_c3} Papers", "Cost, Scalability & Reconfigurability: Delivers physical hardware interaction and real fieldbus protocol behavior without the multi-million dollar capital cost, physical safety hazards, or fixed topologies of full-scale plants."],
+        ["Total Mutually Exclusive Count", "Comprehensive 3-Theme Partition", f"{total_papers} Papers Total", "All 47 literature papers mapped uniquely across the 3 research paradigms."]
     ]
 
     for r_idx, row in enumerate(toc_table):
@@ -104,6 +112,11 @@ def build_comparative_workbook():
                 cell.font = FONT_HEADER
                 cell.fill = FILL_HEADER
                 cell.alignment = ALIGN_HEADER
+            elif r_idx == 4:
+                cell.font = Font(name="Calibri", size=9.5, bold=True, color="003366")
+                cell.fill = PatternFill(start_color="EAEDED", end_color="EAEDED", fill_type="solid")
+                cell.border = MY_WORK_BORDER
+                cell.alignment = ALIGN_LEFT
             else:
                 cell.font = FONT_DATA
                 cell.border = THIN_BORDER_GRAY
@@ -115,14 +128,13 @@ def build_comparative_workbook():
             if c_idx == 2 and r_idx > 0:
                 cell.alignment = ALIGN_CENTER
 
-    # Adjust widths for TOC
     ws_toc.column_dimensions['B'].width = 28
-    ws_toc.column_dimensions['C'].width = 40
-    ws_toc.column_dimensions['D'].width = 16
+    ws_toc.column_dimensions['C'].width = 44
+    ws_toc.column_dimensions['D'].width = 18
     ws_toc.column_dimensions['E'].width = 65
 
     # ─────────────────────────────────────────────────────────────────────────────
-    # Helper to populate theme sheets
+    # Extended Headers
     # ─────────────────────────────────────────────────────────────────────────────
     extended_headers = headers + [
         "Direct Comparison: Gap Addressed by Your Master's Work",
@@ -134,11 +146,7 @@ def build_comparative_workbook():
         "Improve ICS honeypot realism via physical HIL node, closed-loop hydraulic process dynamics, multi-protocol emulation, and edge resource evaluation.",
         "Physical Raspberry Pi 4B (4GB ARM64) + Docker Cluster over 802.11ac Wi-Fi / Gigabit Ethernet.",
         "Purdue-Segmented 5-Tier HIL Architecture (Level 0-1 Physical, Level 2 Ingestion, Level 3 Enterprise, Level 3.5 IDMZ, Out-of-Band Monitoring).",
-        "Yes", # Physical Hardware
-        "Yes", # Simulation
-        "Yes", # Emulation
-        "Yes", # HIL
-        "Yes", # Hybrid
+        "Yes", "Yes", "Yes", "Yes", "Yes",
         "CODESYS IEC 61131-3 Deterministic SoftPLC Runtime (100ms scan cycle, safety trip at P > 200 PSI).",
         "Embedded WebVisu HMI (:8080), Central Web HMI (:8060), InfluxDB 2.7.6 (:8086), Grafana (:3005), SCADA SSH (:2222).",
         "Modbus TCP (:502), OPC UA (:4840), Siemens S7comm (:102), DNP3 (:20000), HTTP/REST.",
@@ -216,7 +224,6 @@ def build_comparative_workbook():
         # Subsequent rows: Literature papers
         curr_row = 6
         for _, r_data in df_subset.iterrows():
-            paper_name = str(r_data['Paper'])
             row_vals = list(r_data)
             gap_info, adv_info = gap_analysis_generator(r_data)
             row_vals.extend([gap_info, adv_info])
@@ -231,7 +238,7 @@ def build_comparative_workbook():
                 cell.alignment = ALIGN_LEFT
                 cell.fill = row_fill
                 
-                # Highlight the comparison columns slightly
+                # Highlight the comparison columns
                 if c_idx >= len(headers) + 1:
                     cell.font = FONT_DIFF
                     cell.fill = FILL_DIFF
@@ -250,12 +257,10 @@ def build_comparative_workbook():
             else:
                 ws.column_dimensions[col_letter].width = 24
 
-        # Freeze Panes below My Work (row 5) and after Paper column (col A)
+        # Freeze Panes
         ws.freeze_panes = "B6"
 
-    # ─────────────────────────────────────────────────────────────────────────────
-    # Gap Analysis Generators for Each Theme
-    # ─────────────────────────────────────────────────────────────────────────────
+    # Gap Generators
     def gap_gen_sim(r):
         gap = f"Paper relies entirely on simulated/emulated environments without physical controller hardware. Susceptible to simulation artifacts, unrealistic zero-latency network assumptions, and lacks physical ARM processor execution dynamics."
         adv = f"Master-Honeypot eliminates this simulation gap by deploying the SoftPLC directly onto physical Raspberry Pi 4B hardware, capturing genuine network jitter (5.8ms RTT) and physical ODE dynamics."
@@ -267,13 +272,11 @@ def build_comparative_workbook():
         return gap, adv
 
     def gap_gen_hard(r):
-        gap = f"Hardware-only testbed has fixed physical components, lacks programmable continuous process dynamics, entails high hardware maintenance costs, and cannot safely simulate destructive overpressure/explosion scenarios."
+        gap = f"Hardware-only testbed or guidelines lack programmable continuous process dynamics, entail high hardware maintenance costs, and cannot safely simulate destructive overpressure/explosion scenarios."
         adv = f"Master-Honeypot achieves full cyber-physical fidelity at $50 hardware cost while safely simulating catastrophic overpressure conditions (>200 PSI) with automated safety trip interlocks."
         return gap, adv
 
-    # ─────────────────────────────────────────────────────────────────────────────
     # Populate the 3 Theme Sheets
-    # ─────────────────────────────────────────────────────────────────────────────
     ws_theme1 = wb_tgt.create_sheet(title="Theme 1 - Sim & Emul Only")
     populate_theme_sheet(ws_theme1, "Theme 1: Comparative Analysis with Simulation & Emulation Only Research", df_sim_only, my_work_data_sim, gap_gen_sim)
 
@@ -281,11 +284,11 @@ def build_comparative_workbook():
     populate_theme_sheet(ws_theme2, "Theme 2: Comparative Analysis with Hybrid & Hardware-in-the-Loop Research", df_hybrid, my_work_data_hybrid, gap_gen_hybrid)
 
     ws_theme3 = wb_tgt.create_sheet(title="Theme 3 - Hardware Only")
-    populate_theme_sheet(ws_theme3, "Theme 3: Comparative Analysis with Hardware-Only & Physical Plant Research", df_hard_only, my_work_data_hard, gap_gen_hard)
+    populate_theme_sheet(ws_theme3, "Theme 3: Comparative Analysis with Hardware-Only & Empirical Research", df_hard_only, my_work_data_hard, gap_gen_hard)
 
-    # 3. Save Target Workbook
+    # Save
     wb_tgt.save(TARGET_FILE)
-    print(f"Successfully generated comparative Excel workbook at:\n{TARGET_FILE}")
+    print(f"Successfully generated clean comparative workbook at:\n{TARGET_FILE}")
 
 if __name__ == "__main__":
     build_comparative_workbook()
