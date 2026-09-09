@@ -203,6 +203,30 @@ services:
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     restart: unless-stopped
 
+  # ── Hardware Bridge (Raspberry Pi 4B → InfluxDB / Redis) ────────────────────
+  rpi_bridge:
+    image: master-honeypot-hmi:latest
+    container_name: ics_rpi_bridge
+    command: python -u /app/scripts/raspberry_pi_bridge.py
+    volumes:
+      - ./scripts:/app/scripts:ro
+    depends_on:
+      - historian
+      - redis
+    networks:
+      - ot-net
+      - monitor-net
+    env_file: .env
+    environment:
+      - RPI_HOST=${RPI_HOST:-192.168.1.8}
+      - REDIS_HOST=redis
+      - INFLUX_URL=http://historian:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_ORG=${INFLUX_ORG}
+      - INFLUX_BUCKET=${INFLUX_BUCKET}
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
   # ── ML Anomaly Detection Engine (Purdue Level 2 - Isolated Monitoring) ────────
   ml_engine:
     build:

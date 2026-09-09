@@ -1555,7 +1555,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"soc_temperature\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"edge_hardware_telemetry\" and r[\"_field\"] == \"soc_temperature\")\n  |> last()",
           "refId": "A"
         }
       ],
@@ -1619,7 +1619,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"cpu_load\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"edge_hardware_telemetry\" and r[\"_field\"] == \"cpu_load\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1683,7 +1683,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"mem_rss_mb\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"edge_hardware_telemetry\" and r[\"_field\"] == \"mem_rss_mb\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1757,7 +1757,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"emergency_stop\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"edge_hardware_telemetry\" and r[\"_field\"] == \"emergency_stop\")\n  |> last()",
           "refId": "A"
         }
       ],

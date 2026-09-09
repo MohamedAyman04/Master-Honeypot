@@ -173,6 +173,7 @@ def main():
                         .field("cpu_load", cpu_load) \
                         .field("cpu_frequency_ghz", cpu_freq_ghz) \
                         .field("mem_rss_mb", mem_rss_mb) \
+                        .field("emergency_stop", emergency_stop) \
                         .field("active_threads", 8) \
                         .time(datetime.utcnow(), WritePrecision.NS)
                     write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=hw_point)
