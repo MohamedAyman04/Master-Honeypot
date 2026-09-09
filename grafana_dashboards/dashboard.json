@@ -1,1520 +1,1798 @@
 {
-    "__inputs": [],
-    "__requires": [],
-    "annotations": {
-        "list": []
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {
+    "list": []
+  },
+  "description": "ICS Honeypot \u2013 Full cross-layer pipeline telemetry and security monitoring",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Pipeline Telemetry",
+      "type": "row"
     },
-    "description": "ICS Honeypot \u2013 Full cross-layer pipeline telemetry and security monitoring",
-    "editable": true,
-    "fiscalYearStartMonth": 0,
-    "graphTooltip": 1,
-    "id": null,
-    "links": [],
-    "panels": [
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 0
-            },
-            "id": 100,
-            "title": "Pipeline Telemetry",
-            "type": "row"
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "psi"
         },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*attacker.*"
             },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "lineWidth": 2,
-                        "fillOpacity": 10
-                    },
-                    "unit": "psi"
-                },
-                "overrides": [
-                    {
-                        "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*attacker.*"
-                        },
-                        "properties": [
-                            {
-                                "id": "color",
-                                "value": {
-                                    "fixedColor": "red",
-                                    "mode": "fixed"
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*historian_bridge.*"
-                        },
-                        "properties": [
-                            {
-                                "id": "color",
-                                "value": {
-                                    "fixedColor": "green",
-                                    "mode": "fixed"
-                                }
-                            }
-                        ]
-                    }
-                ]
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 0,
-                "y": 1
-            },
-            "id": 1,
-            "options": {
-                "tooltip": {
-                    "mode": "multi"
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*historian_bridge.*"
             },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"pressure\")\n  |> group(columns: [\"_measurement\", \"_field\", \"source\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-                    "refId": "A"
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
                 }
-            ],
-            "title": "Pressure (PSI) \u2014 attacker series shows injections",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "lineWidth": 2,
-                        "fillOpacity": 10
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 1
-            },
-            "id": 2,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"flow_rate\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Flow Rate (L/s)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "celsius",
-                    "custom": {
-                        "lineWidth": 2
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 0,
-                "y": 9
-            },
-            "id": 3,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"temperature\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Temperature (\u00b0C)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "rpm",
-                    "custom": {
-                        "lineWidth": 2
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 9
-            },
-            "id": 4,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"pump_rpm\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Pump RPM",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 17
-            },
-            "id": 101,
-            "title": "Security & Anomaly Detection",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "Normal",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "Normal",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "Normal",
-                                    "color": "green",
-                                    "index": 2
-                                },
-                                "1": {
-                                    "text": "Anomaly",
-                                    "color": "red",
-                                    "index": 3
-                                },
-                                "1.0": {
-                                    "text": "Anomaly",
-                                    "color": "red",
-                                    "index": 4
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 8,
-                "x": 0,
-                "y": 18
-            },
-            "id": 5,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"is_anomaly\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"_field\"] == \"score\")\n  )\n  |> map(fn: (r) => ({\n      r with\n      _value: if r[\"_measurement\"] == \"security_alerts\" then 1.0 else float(v: r._value)\n  }))\n  |> group()\n  |> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "ML Anomaly Status",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "lineWidth": 2
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 16,
-                "x": 8,
-                "y": 18
-            },
-            "id": 6,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"anomaly_score\" and r[\"sensor\"] == \"ml_engine\")\n  |> map(fn: (r) => ({r with _value: float(v: r._value)}))\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "ML Anomaly Score (lower = more anomalous)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "custom": {
-                        "lineWidth": 2
-                    },
-                    "color": {
-                        "mode": "palette-classic"
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 0,
-                "y": 26
-            },
-            "id": 7,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"modbus_events\" or r[\"_measurement\"] == \"process_state\")\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"modbus_events\" and r[\"_field\"] == \"value\") or (r[\"_measurement\"] == \"process_state\" and r[\"_field\"] == \"pressure\"))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Cross-Layer Correlation (Write Commands vs Pressure)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "custom": {
-                        "drawStyle": "points",
-                        "lineWidth": 0,
-                        "pointSize": 5
-                    },
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 26
-            },
-            "id": 8,
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_DELTA_LOG\" and r[\"_field\"] == \"delta\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Replay Attack \u2013 Pressure Delta (PSI)",
-            "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 34
-            },
-            "id": 102,
-            "title": "Attack Simulation Results",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 6,
-                "x": 0,
-                "y": 35
-            },
-            "id": 9,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "Semantic Injection",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 6,
-                "x": 6,
-                "y": 35
-            },
-            "id": 10,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\")\n  )\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "Replay Attack",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 6,
-                "x": 12,
-                "y": 35
-            },
-            "id": 11,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\" and r[\"_field\"] == \"port\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "DNP3 Probe",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 6,
-                "x": 18,
-                "y": 35
-            },
-            "id": 12,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "S7comm Probe",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "green",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 12,
-                "x": 0,
-                "y": 41
-            },
-            "id": 14,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "Reconnaissance Scan (FC3 Read-Only)",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "WAITING",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 6,
-                "w": 12,
-                "x": 12,
-                "y": 41
-            },
-            "id": 15,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\") and r[\"_field\"] == \"score\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "EWMA Stealth Drift (CUSUM Detection)",
-            "type": "stat"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 47
-            },
-            "id": 103,
-            "title": "Protocol Honeypot Events",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "custom": {}
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 24,
-                "x": 0,
-                "y": 48
-            },
-            "id": 13,
-            "options": {
-                "frameIndex": 0,
-                "showHeader": true
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Honeypot Events",
-            "type": "table"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 57
-            },
-            "id": 104,
-            "title": "Terminal Operator Commands (Host-Side Attacks)",
-            "type": "row"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 5,
-                "w": 6,
-                "x": 0,
-                "y": 58
-            },
-            "id": 20,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "SSH Attempts",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "orange",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "orange",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 5,
-                "w": 6,
-                "x": 6,
-                "y": 58
-            },
-            "id": 21,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "API Recon Probes",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "dark-red",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "dark-red",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 5,
-                "w": 6,
-                "x": 12,
-                "y": 58
-            },
-            "id": 22,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "Modbus Writes (Malicious)",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "yellow",
-                                "value": 1
-                            }
-                        ]
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "match": "null",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 0
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "match": "empty",
-                                "result": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 1
-                                }
-                            },
-                            "type": "special"
-                        },
-                        {
-                            "options": {
-                                "1": {
-                                    "text": "DETECTED",
-                                    "color": "yellow",
-                                    "index": 2
-                                }
-                            },
-                            "type": "value"
-                        },
-                        {
-                            "options": {
-                                "0": {
-                                    "text": "NONE",
-                                    "color": "green",
-                                    "index": 3
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ]
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 5,
-                "w": 6,
-                "x": 18,
-                "y": 58
-            },
-            "id": 23,
-            "options": {
-                "reduceOptions": {
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "value",
-                "colorMode": "value",
-                "graphMode": "none"
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-                    "refId": "A"
-                }
-            ],
-            "title": "Modbus Reads / Cred Discovery",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "influxdb",
-                "uid": "${DS_INFLUXDB}"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "custom": {}
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 10,
-                "w": 24,
-                "x": 0,
-                "y": 63
-            },
-            "id": 24,
-            "options": {
-                "frameIndex": 0,
-                "showHeader": true
-            },
-            "targets": [
-                {
-                    "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
-                    "refId": "A"
-                }
-            ],
-            "title": "Terminal Command Log (hplog events)",
-            "type": "table"
-        }
-    ],
-    "refresh": "5s",
-    "schemaVersion": 38,
-    "tags": [
-        "ics",
-        "honeypot",
-        "scada"
-    ],
-    "templating": {
-        "list": [
-            {
-                "current": {},
-                "hide": 0,
-                "includeAll": false,
-                "name": "DS_INFLUXDB",
-                "options": [],
-                "query": "influxdb",
-                "refresh": 1,
-                "type": "datasource"
-            }
+              }
+            ]
+          }
         ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"pressure\")\n  |> group(columns: [\"_measurement\", \"_field\", \"source\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Pressure (PSI) \u2014 attacker series shows injections",
+      "type": "timeseries"
     },
-    "time": {
-        "from": "now-1h",
-        "to": "now"
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"flow_rate\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Flow Rate (L/s)",
+      "type": "timeseries"
     },
-    "timepicker": {},
-    "timezone": "browser",
-    "title": "Level 2 ICS Dashboard",
-    "uid": "level2-dashboard",
-    "version": 1
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 3,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"temperature\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature (\u00b0C)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rpm",
+          "custom": {
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 4,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" and r[\"_field\"] == \"pump_rpm\")\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Pump RPM",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 101,
+      "title": "Security & Anomaly Detection",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Normal",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "Normal",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "Normal",
+                  "color": "green",
+                  "index": 2
+                },
+                "1": {
+                  "text": "Anomaly",
+                  "color": "red",
+                  "index": 3
+                },
+                "1.0": {
+                  "text": "Anomaly",
+                  "color": "red",
+                  "index": 4
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"is_anomaly\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"_field\"] == \"score\")\n  )\n  |> map(fn: (r) => ({\n      r with\n      _value: if r[\"_measurement\"] == \"security_alerts\" then 1.0 else float(v: r._value)\n  }))\n  |> group()\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "ML Anomaly Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 18
+      },
+      "id": 6,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"anomaly_score\" and r[\"sensor\"] == \"ml_engine\")\n  |> map(fn: (r) => ({r with _value: float(v: r._value)}))\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "ML Anomaly Score (lower = more anomalous)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 7,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"modbus_events\" or r[\"_measurement\"] == \"process_state\")\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"modbus_events\" and r[\"_field\"] == \"value\") or (r[\"_measurement\"] == \"process_state\" and r[\"_field\"] == \"pressure\"))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Cross-Layer Correlation (Write Commands vs Pressure)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "points",
+            "lineWidth": 0,
+            "pointSize": 5
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 8,
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_DELTA_LOG\" and r[\"_field\"] == \"delta\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Replay Attack \u2013 Pressure Delta (PSI)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 102,
+      "title": "Attack Simulation Results",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 35
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Semantic Injection",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 35
+      },
+      "id": 10,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\")\n  )\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Replay Attack",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 35
+      },
+      "id": 11,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\" and r[\"_field\"] == \"port\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "DNP3 Probe",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 35
+      },
+      "id": 12,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "S7comm Probe",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "id": 14,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Reconnaissance Scan (FC3 Read-Only)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "id": 15,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\") and r[\"_field\"] == \"score\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "EWMA Stealth Drift (CUSUM Detection)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 103,
+      "title": "Protocol Honeypot Events",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 13,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
+          "refId": "A"
+        }
+      ],
+      "title": "Honeypot Events",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "id": 104,
+      "title": "Terminal Operator Commands (Host-Side Attacks)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 58
+      },
+      "id": 20,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "SSH Attempts",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "orange",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 58
+      },
+      "id": 21,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "API Recon Probes",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "dark-red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "dark-red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 58
+      },
+      "id": 22,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Modbus Writes (Malicious)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "yellow",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "NONE",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 58
+      },
+      "id": 23,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Modbus Reads / Cred Discovery",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "id": 24,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
+          "refId": "A"
+        }
+      ],
+      "title": "Terminal Command Log (hplog events)",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "id": 110,
+      "panels": [],
+      "title": "Edge Hardware Health & SoftPLC Host Forensics (Raspberry Pi 4B)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 85,
+          "min": 20,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 55
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 74
+      },
+      "id": 111,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"soc_temperature\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Raspberry Pi 4B \u2014 SoC Junction Temp (\u00b0C)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 74
+      },
+      "id": 112,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"cpu_load\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "ARM Cortex-A72 CPU Load Average (1m)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "mbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 74
+      },
+      "id": 113,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"mem_rss_mb\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "SoftPLC Resident Memory (VmRSS MB)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "NORMAL"
+                },
+                "1": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "TRIPPED (E-STOP)"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 74
+      },
+      "id": 114,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"edge_hardware_telemetry\" or r[\"_measurement\"] == \"plc_telemetry\") and r[\"_field\"] == \"emergency_stop\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)",
+          "refId": "A"
+        }
+      ],
+      "title": "Hardware E-Stop Relay & Trip Interlock",
+      "type": "stat"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "tags": [
+    "ics",
+    "honeypot",
+    "scada"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "name": "DS_INFLUXDB",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Level 2 ICS Dashboard",
+  "uid": "level2-dashboard",
+  "version": 1
 }

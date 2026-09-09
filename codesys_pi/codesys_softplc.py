@@ -19,6 +19,7 @@ Implements:
 """
 
 import sys
+import os
 import time
 import math
 import random
@@ -698,6 +699,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <td style="color: var(--text-secondary);">Emergency Stop Relay</td>
                     <td id="diag_estop">DE-ASSERTED</td>
                 </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">SoC Junction Temp</td>
+                    <td><span id="val_soc_temp" style="color: #4ade80; font-weight: 600;">--</span> <span style="font-size: 11px;">°C</span></td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">ARM Cortex-A72</td>
+                    <td><span id="val_cpu_freq">--</span> MHz (<span id="val_cpu_load">--</span> load)</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-secondary);">SoftPLC Process RSS</td>
+                    <td><span id="val_mem_rss">--</span> MB RAM</td>
+                </tr>
             </table>
 
             <div style="margin-top: 24px;">
@@ -751,6 +764,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 document.getElementById('diag_estop').innerText = (data.emergency_stop === 1) ? 'ASSERTED (ACTIVE)' : 'DE-ASSERTED';
 
+                document.getElementById('val_soc_temp').innerText = (data.soc_temp !== undefined) ? data.soc_temp.toFixed(1) : '--';
+                document.getElementById('val_cpu_freq').innerText = data.cpu_freq_mhz || 1800;
+                document.getElementById('val_cpu_load').innerText = (data.cpu_load !== undefined) ? data.cpu_load.toFixed(2) : '--';
+                document.getElementById('val_mem_rss').innerText = (data.mem_rss_mb !== undefined) ? data.mem_rss_mb.toFixed(1) : '--';
+
                 let rows = '';
                 (data.event_log || []).slice(0, 10).forEach(entry => {
                     rows += `<tr>
@@ -802,10 +820,48 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 def index():
     return render_template_string(HTML_TEMPLATE)
 
+def get_hardware_telemetry():
+    soc_temp = 44.0
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+            soc_temp = round(float(f.read().strip()) / 1000.0, 1)
+    except Exception:
+        pass
+
+    cpu_freq_mhz = 1800
+    try:
+        with open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r") as f:
+            cpu_freq_mhz = int(float(f.read().strip()) / 1000.0)
+    except Exception:
+        pass
+
+    try:
+        load_1m = round(os.getloadavg()[0], 2)
+    except Exception:
+        load_1m = 0.15
+
+    mem_rss_mb = 116.0
+    try:
+        with open("/proc/self/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    mem_rss_mb = round(float(line.split()[1]) / 1024.0, 1)
+                    break
+    except Exception:
+        pass
+
+    return {
+        "soc_temp": soc_temp,
+        "cpu_freq_mhz": cpu_freq_mhz,
+        "cpu_load": load_1m,
+        "mem_rss_mb": mem_rss_mb
+    }
+
 @app.route("/api/status")
 def get_status():
+    hw = get_hardware_telemetry()
     with plc.lock:
-        return jsonify({
+        status_dict = {
             "pump_rpm": plc.pump_rpm,
             "valve_pos": plc.valve_pos,
             "pressure": plc.pressure,
@@ -818,7 +874,9 @@ def get_status():
             "scan_count": plc.scan_count,
             "modbus_write_count": plc.modbus_write_count,
             "event_log": list(plc.event_log)
-        })
+        }
+        status_dict.update(hw)
+        return jsonify(status_dict)
 
 @app.route("/api/set_rpm", methods=["POST"])
 def set_rpm():
