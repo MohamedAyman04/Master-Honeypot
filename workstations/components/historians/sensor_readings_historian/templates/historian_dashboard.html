@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historian 3 - Sensor Readings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --text: #16202b;
+            --muted: #607386;
+            --surface: #ffffff;
+            --surface-soft: #f7f9fc;
+            --border: #d7e1eb;
+            --brand: #0f7b6c;
+            --navy: #15304d;
+            --shadow: 0 18px 48px rgba(24, 38, 54, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Manrope', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 8% 12%, rgba(15, 123, 108, 0.12), transparent 36%),
+                radial-gradient(circle at 92% 86%, rgba(21, 48, 77, 0.14), transparent 42%),
+                linear-gradient(160deg, #f6f9fd 0%, #e9eff6 100%);
+            padding: 24px;
+        }
+
+        .shell { width: min(1024px, 100%); margin: 0 auto; display: grid; gap: 16px; }
+
+        .hero {
+            background: linear-gradient(140deg, #0f2237 0%, #11365a 60%, #0f7b6c 100%);
+            color: #f2fbff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero h1 { margin: 0 0 10px; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+        .chip {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .links { display: grid; gap: 10px; }
+        a {
+            text-decoration: none;
+            color: var(--navy);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            padding: 11px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <h1>Historian Sensor Readings</h1>
+            <div class="chips">
+                <span class="chip">User: {{ username }}</span>
+                <span class="chip">Role: {{ role|upper }}</span>
+                <span class="chip">Records: {{ records_count }}</span>
+            </div>
+        </section>
+
+        <section class="panel links">
+            <a href="/query">Open Query Console</a>
+            <a href="/api/readings">View Readings JSON</a>
+            <a href="/api/predefined/last24h">Run Predefined Last 24h Query</a>
+            <a href="/logout">Logout</a>
+        </section>
+    </main>
+</body>
+</html>

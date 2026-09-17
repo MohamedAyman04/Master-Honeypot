@@ -1,0 +1,28 @@
+# Web Framework
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Cors==4.0.0
+
+# Database
+PyMySQL==1.1.0
+SQLAlchemy==2.0.21
+
+# OPC UA
+opcua==0.98.13
+
+# Utilities
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Logging & Monitoring
+python-json-logger==2.0.7
+prometheus-client==0.20.0
+prometheus-flask-exporter==0.23.0
+
+# Security & Validation
+Werkzeug==2.3.7
+
+# Testing (optional, for Phase 3)
+pytest==7.4.0
+pytest-cov==4.1.0
+paramiko==3.3.1

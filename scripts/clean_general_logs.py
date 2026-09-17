@@ -10,7 +10,10 @@ import json
 import sys
 from datetime import datetime
 
-LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "general logs.jsonl")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_FILE = os.path.join(REPO_ROOT, "logs", "general logs.jsonl")
+if not os.path.exists(LOG_FILE):
+    LOG_FILE = os.path.join(REPO_ROOT, "general logs.jsonl")
 
 EVENT_TYPE_MAPPING = {
     "API_ACCESS": "api_access",

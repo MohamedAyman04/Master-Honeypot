@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workstation Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #eff3f8;
+            --surface: #ffffff;
+            --surface-soft: #f7f9fc;
+            --text: #16202b;
+            --muted: #637487;
+            --border: #d8e1eb;
+            --brand: #0f7b6c;
+            --brand-strong: #0c665a;
+            --danger: #d14343;
+            --shadow: 0 20px 55px rgba(23, 37, 54, 0.12);
+            --radius: 18px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Manrope', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 8% 12%, rgba(15, 123, 108, 0.13), transparent 38%),
+                radial-gradient(circle at 92% 88%, rgba(25, 56, 90, 0.16), transparent 42%),
+                linear-gradient(160deg, #f6f9fd 0%, #e9eff6 100%);
+            display: grid;
+            place-items: center;
+            padding: 28px;
+        }
+
+        .shell {
+            width: min(1040px, 100%);
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            background: var(--surface);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(216, 225, 235, 0.8);
+        }
+
+        .brand-pane {
+            padding: 42px;
+            background: linear-gradient(150deg, #0f2237 0%, #13385f 62%, #0f7b6c 100%);
+            color: #f6fbff;
+        }
+
+        .brand-pill {
+            display: inline-block;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.17);
+            margin-bottom: 18px;
+        }
+
+        .brand-pane h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+            line-height: 1.2;
+        }
+
+        .brand-pane p {
+            margin: 0;
+            color: rgba(244, 250, 255, 0.9);
+            max-width: 34ch;
+            line-height: 1.6;
+        }
+
+        .panel {
+            padding: 42px;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .panel h2 {
+            margin: 0;
+            font-size: 1.7rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .error {
+            margin: 0;
+            padding: 11px 13px;
+            border-radius: 12px;
+            background: #ffeaea;
+            color: var(--danger);
+            border: 1px solid #f6caca;
+            font-weight: 600;
+        }
+
+        form {
+            display: grid;
+            gap: 12px;
+        }
+
+        label {
+            font-weight: 700;
+            font-size: 0.86rem;
+            color: #304256;
+        }
+
+        input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font: inherit;
+            background: var(--surface-soft);
+            color: var(--text);
+            transition: border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 4px rgba(15, 123, 108, 0.12);
+        }
+
+        button {
+            margin-top: 8px;
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            background: linear-gradient(120deg, var(--brand) 0%, var(--brand-strong) 100%);
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease;
+            box-shadow: 0 12px 24px rgba(12, 102, 90, 0.25);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 15px 26px rgba(12, 102, 90, 0.28);
+        }
+
+        .footnote {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 920px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-pane,
+            .panel {
+                padding: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="brand-pane">
+            <span class="brand-pill">Industrial Operations</span>
+            <h1>Engineering Workstation Access</h1>
+            <p>Unified operator, engineer, and admin control entrypoint with activity tracking and historian handoff.</p>
+        </section>
+
+        <section class="panel">
+            <h2>Sign In</h2>
+            <p class="subtitle">Authenticate to open workstation controls and historian tools.</p>
+
+            {% if error %}
+            <p class="error">{{ error }}</p>
+            {% endif %}
+
+            <form id="login-form" method="POST" action="/login">
+                <label for="username">Username</label>
+                <input id="username" name="username" type="text" required />
+
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required />
+
+                <button type="submit">Login to Workstation</button>
+            </form>
+
+            <p class="footnote">Default users (intentional vulnerability): admin/admin, operator/operator123, engineer/engineer456</p>
+        </section>
+    </main>
+
+    <script>
+        function trackActivity(event, target, destination) {
+            const payload = {
+                event,
+                target,
+                path: window.location.pathname,
+                destination: destination || 'NONE'
+            };
+
+            fetch('/activity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch(() => {});
+        }
+
+        document.getElementById('login-form').addEventListener('submit', function () {
+            trackActivity('FORM_SUBMIT', 'login-form', '/login');
+        });
+    </script>
+</body>
+</html>

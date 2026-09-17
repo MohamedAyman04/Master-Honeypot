@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workstation Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #eff3f8;
+            --surface: #ffffff;
+            --surface-soft: #f6f9fc;
+            --text: #16202b;
+            --muted: #607386;
+            --border: #d7e1eb;
+            --brand: #0f7b6c;
+            --brand-strong: #0d685c;
+            --navy: #15304d;
+            --danger: #cf4141;
+            --success: #1b8f66;
+            --shadow: 0 18px 48px rgba(24, 38, 54, 0.12);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Manrope', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 9% 10%, rgba(15, 123, 108, 0.13), transparent 36%),
+                radial-gradient(circle at 93% 84%, rgba(21, 48, 77, 0.14), transparent 43%),
+                linear-gradient(165deg, #f5f9fd 0%, #e9eff6 100%);
+            padding: 30px;
+        }
+
+        .shell {
+            width: min(1120px, 100%);
+            margin: 0 auto;
+            display: grid;
+            gap: 20px;
+        }
+
+        .hero {
+            background: linear-gradient(140deg, #0f2237 0%, #11365a 60%, #0f7b6c 100%);
+            color: #f2fbff;
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+            letter-spacing: -0.02em;
+        }
+
+        .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .chip {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel h2 {
+            margin: 0 0 14px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .btn {
+            border: 1px solid transparent;
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+
+        .btn-primary {
+            background: linear-gradient(120deg, var(--brand) 0%, var(--brand-strong) 100%);
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(13, 104, 92, 0.25);
+        }
+
+        .btn-ghost {
+            background: var(--surface-soft);
+            border-color: var(--border);
+            color: #294055;
+        }
+
+        .btn-link {
+            text-decoration: none;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #action-result {
+            margin-top: 12px;
+            min-height: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .status-ok { color: var(--success); }
+        .status-fail { color: var(--danger); }
+
+        .stack {
+            display: grid;
+            gap: 10px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: #2f4458;
+            font-size: 0.92rem;
+        }
+
+        .field-label {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .db-select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface-soft);
+            color: #294055;
+            padding: 10px 12px;
+            font: inherit;
+            font-weight: 700;
+        }
+
+        .db-select:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 4px rgba(15, 123, 108, 0.12);
+        }
+
+        @media (max-width: 960px) {
+            body { padding: 16px; }
+            .grid { grid-template-columns: 1fr; }
+            .controls { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <h1>Workstation Operations Center</h1>
+            <div class="meta">
+                <span class="chip">User: {{ username }}</span>
+                <span class="chip">Role: {{ role|upper }}</span>
+                <span class="chip">Node: {{ device_profile.component }}</span>
+                <span class="chip">IP: {{ device_profile.ip }}</span>
+                <span class="chip">MAC: {{ device_profile.mac }}</span>
+                <span class="chip">SN: {{ device_profile.serial }}</span>
+                <span class="chip">Model: {{ device_profile.model }}</span>
+            </div>
+        </section>
+
+        <section class="grid">
+            <article class="panel">
+                <h2>Command Controls</h2>
+                <div class="controls">
+                    <button class="btn btn-primary" id="ack-alarm" type="button">Acknowledge Alarm</button>
+                    <button class="btn btn-ghost" id="basic-control" type="button">Basic Control</button>
+                    {% if role in ['engineer', 'admin'] %}
+                    <button class="btn btn-ghost" id="engineering-tool" type="button">Engineering Tool</button>
+                    {% endif %}
+                    {% if role == 'admin' %}
+                    <button class="btn btn-ghost" id="system-config" type="button">System Configuration</button>
+                    {% endif %}
+                </div>
+                <p id="action-result"></p>
+            </article>
+
+            <article class="panel stack">
+                <h2>Navigation</h2>
+                <p class="field-label">Target Database</p>
+                <select id="db-selector" class="db-select">
+                    <option value="sensor_readings_historian">Sensor Readings Historian</option>
+                    <option value="maintenance_times_historian">Maintenance Times Historian</option>
+                    <option value="components_historian">Components Historian</option>
+                    <option value="user_historian">User Historian</option>
+                </select>
+
+                <a class="btn btn-primary btn-link" id="historian-link"
+                    href="http://localhost:5005/handoff?username={{ username }}&role={{ role }}&selected_db=sensor_readings_historian">Open
+                    Historian Query Console</a>
+                <a class="btn btn-ghost btn-link" id="logout-link" href="/logout">Logout</a>
+                <div class="row"><span>Historian Target</span><strong>localhost:5005/query</strong></div>
+                <div class="row"><span>Workstation Session</span><strong>Active</strong></div>
+                <div class="row"><span>Vendor</span><strong>{{ device_profile.vendor }}</strong></div>
+            </article>
+        </section>
+
+        <section class="panel" style="margin-top: 20px;">
+            <h2>SCADA Terminal</h2>
+            <div id="terminal-output" style="background: #1e1e1e; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 10px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <span style="font-family: monospace; font-weight: bold; align-self: center;">$&gt;</span>
+                <input type="text" id="terminal-input" style="flex: 1; padding: 10px; font-family: monospace; border: 1px solid var(--border); border-radius: 4px; background: #2d2d2d; color: #fff;" placeholder="Enter command..." autocomplete="off">
+                <button id="terminal-send" class="btn btn-primary">Send</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function trackActivity(event, target, destination) {
+            const payload = {
+                event,
+                target,
+                path: window.location.pathname,
+                destination: destination || 'NONE'
+            };
+
+            fetch('/activity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch(() => {});
+        }
+
+        const dbSelector = document.getElementById('db-selector');
+        const historianLink = document.getElementById('historian-link');
+
+        function buildHistorianHandoffUrl() {
+            const targetDb = dbSelector.value;
+            const username = encodeURIComponent('{{ username }}');
+            const role = encodeURIComponent('{{ role }}');
+            return `http://localhost:5005/handoff?username=${username}&role=${role}&selected_db=${encodeURIComponent(targetDb)}`;
+        }
+
+        function refreshHistorianLink() {
+            if (historianLink) {
+                historianLink.href = buildHistorianHandoffUrl();
+            }
+        }
+
+        dbSelector.addEventListener('change', function () {
+            refreshHistorianLink();
+            trackActivity('SELECT', 'db-selector', dbSelector.value);
+        });
+
+        if (historianLink) {
+            historianLink.addEventListener('click', function () {
+                refreshHistorianLink();
+                trackActivity('CLICK', 'historian-link', historianLink.href);
+            });
+        }
+
+        refreshHistorianLink();
+
+        document.getElementById('logout-link').addEventListener('click', function () {
+            trackActivity('CLICK', 'logout-link', '/logout');
+        });
+
+        async function triggerAction(actionPath, targetId) {
+            trackActivity('CLICK', targetId, actionPath);
+            const resultNode = document.getElementById('action-result');
+            try {
+                const response = await fetch(actionPath, { method: 'POST' });
+                const payload = await response.json();
+                if (!response.ok) {
+                    resultNode.textContent = payload.error || 'Action failed';
+                    resultNode.className = 'status-fail';
+                    return;
+                }
+                resultNode.textContent = payload.message || 'Action completed';
+                resultNode.className = 'status-ok';
+            } catch (err) {
+                resultNode.textContent = 'Action request error';
+                resultNode.className = 'status-fail';
+            }
+        }
+
+        const ackAlarmBtn = document.getElementById('ack-alarm');
+        const basicControlBtn = document.getElementById('basic-control');
+        const engineeringToolBtn = document.getElementById('engineering-tool');
+        const systemConfigBtn = document.getElementById('system-config');
+
+        ackAlarmBtn.addEventListener('click', function () {
+            triggerAction('/action/ack-alarm', 'ack-alarm');
+        });
+
+        basicControlBtn.addEventListener('click', function () {
+            triggerAction('/action/basic-control', 'basic-control');
+        });
+
+        if (engineeringToolBtn) {
+            engineeringToolBtn.addEventListener('click', function () {
+                triggerAction('/action/engineering-tool', 'engineering-tool');
+            });
+        }
+
+        if (systemConfigBtn) {
+            systemConfigBtn.addEventListener('click', function () {
+                triggerAction('/action/system-config', 'system-config');
+            });
+        }
+
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalInput = document.getElementById('terminal-input');
+        const terminalSend = document.getElementById('terminal-send');
+
+        function appendTerminal(text, type='output') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            if (type === 'input') div.style.color = '#fff';
+            if (type === 'error') div.style.color = '#ff5555';
+            terminalOutput.appendChild(div);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        terminalSend.addEventListener('click', async () => {
+            const cmd = terminalInput.value.trim();
+            if (!cmd) return;
+            terminalInput.value = '';
+            appendTerminal('$ ' + cmd, 'input');
+            
+            try {
+                const response = await fetch('/action/terminal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                const data = await response.json();
+                if (data.output) {
+                    appendTerminal(data.output, 'output');
+                }
+                if (data.error) {
+                    appendTerminal(data.error, 'error');
+                }
+            } catch (err) {
+                appendTerminal('Network error', 'error');
+            }
+        });
+
+        terminalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') terminalSend.click();
+        });
+    </script>
+</body>
+</html>

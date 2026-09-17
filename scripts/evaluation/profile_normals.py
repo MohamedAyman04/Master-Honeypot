@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """v7 Investigation of Active Attack Split TN=0 and transitional states."""
-import pandas as pd, numpy as np, warnings, os
+import os, sys, warnings
+sys.path.insert(0, os.path.dirname(__file__))
+import pandas as pd, numpy as np
 warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from sklearn.ensemble import IsolationForest

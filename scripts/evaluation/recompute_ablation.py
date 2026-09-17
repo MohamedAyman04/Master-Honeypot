@@ -6,7 +6,9 @@ import pandas as pd
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
 # Add scripts directory to path
-sys.path.append(os.path.abspath("scripts"))
+SCRIPTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
 from architecture_validation import (
     load_campaign,
     build_all_detectors,

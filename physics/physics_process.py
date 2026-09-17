@@ -8,7 +8,23 @@ Default operating point: 1200 RPM pump, valve 50% open (~12 L/s flow).
 """
 import time
 import os
+import json
+import redis
 from physics.physics_engine import PipelineSimulator
+
+
+def is_hil_active(r_client) -> bool:
+    if not r_client:
+        return False
+    try:
+        raw = r_client.get("rpi_plc_state")
+        if raw:
+            st = json.loads(raw)
+            if time.time() - float(st.get("timestamp", 0)) < 8.0:
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def run_physics():
@@ -26,7 +42,15 @@ def run_physics():
     )
     print(f"    Update interval: 1s")
 
+    tick = 0
     while True:
+        tick += 1
+        if is_hil_active(sim.r):
+            if tick % 15 == 0:
+                print("[PHYSICS STANDBY] Physical Raspberry Pi HIL active; process state mirrored from hardware.")
+            time.sleep(1)
+            continue
+
         sim.update()
         state = sim.get_state()
         print(

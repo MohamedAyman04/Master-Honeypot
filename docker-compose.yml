@@ -20,6 +20,8 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     env_file: .env
+    volumes:
+      - ./physics:/app/physics:ro
     depends_on:
       - redis
     restart: unless-stopped
@@ -176,6 +178,8 @@ services:
       - INFLUX_BUCKET=${INFLUX_BUCKET}
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     restart: unless-stopped
+    volumes:
+      - ./hmi:/app:ro
     command: python hmi_app.py
 
   # ── Historian Bridge (Modbus → InfluxDB) ─────────────────────────────────────
@@ -184,6 +188,8 @@ services:
       context: ./hmi
     container_name: ics_historian_bridge
     command: python hmi_simulator.py
+    volumes:
+      - ./hmi:/app:ro
     depends_on:
       plc_simulator:
         condition: service_started
@@ -218,7 +224,7 @@ services:
       - monitor-net
     env_file: .env
     environment:
-      - RPI_HOST=${RPI_HOST:-192.168.1.8}
+      - RPI_HOST=${RPI_HOST:-172.20.10.8,192.168.1.8}
       - REDIS_HOST=redis
       - INFLUX_URL=http://historian:8086
       - INFLUX_TOKEN=${INFLUX_TOKEN}
@@ -279,6 +285,179 @@ services:
       - SCADA_SSH_PORT=${SCADA_SSH_PORT}
       - SCADA_SSH_USER=${SCADA_SSH_USER}
       - SCADA_SSH_PASS=${SCADA_SSH_PASS}
+    restart: unless-stopped
+
+  # ── Purdue Level 3 — Enterprise Workstations & Decoys ─────────────────────────
+  workstation_eng_01:
+    image: master-honeypot-workstation-1:latest
+    container_name: ws_eng_01
+    hostname: ws-eng-01
+    mac_address: "02:42:c0:a8:32:15"
+    ports:
+      - "5021:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_1
+      - WORKSTATION_DB_NAME=workstation_1.db
+      - WORKSTATION_DEVICE_IP=192.168.50.21
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:32:15
+      - WORKSTATION_SERIAL=FAC-ENG-2401
+      - WORKSTATION_MODEL=Siemens IPC477E Industrial PC
+      - WORKSTATION_VENDOR=Siemens
+      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_HISTORIAN_URL=http://historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.21
+    depends_on:
+      - story_logger
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  workstation_eng_02:
+    image: master-honeypot-workstation-2:latest
+    container_name: ws_eng_02
+    hostname: ws-eng-safety-02
+    mac_address: "02:42:c0:a8:32:16"
+    ports:
+      - "5022:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_2
+      - WORKSTATION_DB_NAME=workstation_2.db
+      - WORKSTATION_DEVICE_IP=192.168.50.22
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:32:16
+      - WORKSTATION_SERIAL=FAC-ENG-2402
+      - WORKSTATION_MODEL=Siemens IPC677E High-End Engineering PC
+      - WORKSTATION_VENDOR=Siemens
+      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_HISTORIAN_URL=http://historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.22
+    depends_on:
+      - story_logger
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  workstation_ops_01:
+    image: master-honeypot-workstation-3:latest
+    container_name: ws_ops_01
+    hostname: ws-scada-ops-01
+    mac_address: "02:42:c0:a8:32:1f"
+    ports:
+      - "5023:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_3
+      - WORKSTATION_DB_NAME=workstation_3.db
+      - WORKSTATION_DEVICE_IP=192.168.50.31
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:32:1f
+      - WORKSTATION_SERIAL=FAC-OPS-3101
+      - WORKSTATION_MODEL=Rockwell Automation ASEM 6300B Industrial PC
+      - WORKSTATION_VENDOR=Rockwell Automation
+      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_HISTORIAN_URL=http://historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.31
+    depends_on:
+      - story_logger
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  workstation_ops_02:
+    image: master-honeypot-workstation-4:latest
+    container_name: ws_ops_02
+    hostname: ws-scada-ops-02
+    mac_address: "02:42:c0:a8:32:20"
+    ports:
+      - "5024:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_4
+      - WORKSTATION_DB_NAME=workstation_4.db
+      - WORKSTATION_DEVICE_IP=192.168.50.32
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:32:20
+      - WORKSTATION_SERIAL=FAC-OPS-3102
+      - WORKSTATION_MODEL=Advantech UNO-2484G Industrial Box PC
+      - WORKSTATION_VENDOR=Advantech
+      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_HISTORIAN_URL=http://historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.32
+    depends_on:
+      - story_logger
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  workstation_maint_01:
+    image: master-honeypot-workstation-5:latest
+    container_name: ws_maint_01
+    hostname: ws-field-maint-01
+    mac_address: "02:42:c0:a8:32:29"
+    ports:
+      - "5025:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_5
+      - WORKSTATION_DB_NAME=workstation_5.db
+      - WORKSTATION_DEVICE_IP=192.168.50.41
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:32:29
+      - WORKSTATION_SERIAL=FAC-MNT-4101
+      - WORKSTATION_MODEL=Panasonic Toughbook CF-33 Field Maintenance Laptop
+      - WORKSTATION_VENDOR=Panasonic Industrial
+      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_HISTORIAN_URL=http://historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.41
+    depends_on:
+      - story_logger
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  # ── Purdue Level 3 — Industrial OPC-UA & Enterprise Historian ────────────────
+  opcua_l3:
+    image: master-honeypot-opcua:latest
+    container_name: ics_opcua_l3
+    ports:
+      - "4841:4840"
+    environment:
+      - OPCUA_PUSH_SECONDS=15
+      - OPCUA_METRICS_PORT=9108
+      - PYTHONUNBUFFERED=1
+      - LEVEL2_PULL_URL=http://192.168.50.10:5100/api/physics/metrics
+      - LEVEL2_SHARED_TOKEN=${L2L3_SHARED_TOKEN:-change-this-token}
+      - LEVEL2_TIMEOUT_SECONDS=3.0
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.50
+    depends_on:
+      - ics_scada_ssh
+    restart: unless-stopped
+
+  historian_l3:
+    image: master-honeypot-historian_l3:latest
+    container_name: ics_historian_l3
+    ports:
+      - "5005:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///database-files/historians/sensor_readings_historian.db
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+    networks:
+      enterprise-net:
+        ipv4_address: 192.168.50.60
+    depends_on:
+      - story_logger
     restart: unless-stopped
 
   # ── Network Sniffer / Logger (Full Interface Capture) ────────────────────────
@@ -425,12 +604,13 @@ services:
     volumes:
       - .:/repo
     environment:
-      - "STORY_LOG_PATH=/repo/general logs.jsonl"
+      - "STORY_LOG_PATH=/repo/logs/general logs.jsonl"
       - PYTHONUNBUFFERED=1
     networks:
       - dmz-net
       - monitor-net
       - l2l3-bridge-net
+      - enterprise-net
     restart: unless-stopped
 
   # ── Honeypot Historian API (DMZ-facing decoy) ─────────────────────────────────
@@ -467,7 +647,7 @@ services:
     ports:
       - "8502:8501"
     volumes:
-      - "./general logs.jsonl:/data/general_logs.jsonl"
+      - "./logs/general logs.jsonl:/data/general_logs.jsonl"
     networks:
       - monitor-net
     env_file: .env

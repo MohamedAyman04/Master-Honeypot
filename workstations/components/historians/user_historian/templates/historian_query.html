@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historian SQL Query Console</title>
+</head>
+<body>
+    <h1>Historian SQL Query Test Console</h1>
+    <p>Intentionally vulnerable query form for SQL injection testing in local lab.</p>
+
+    <form method="POST" action="http://localhost:5005/query">
+        <label for="metric_name">Metric Name</label><br />
+        <input id="metric_name" name="metric_name" type="text" value="{{ metric_name }}" placeholder="Temperature_Reactor_A" size="60" />
+        <br /><br />
+
+        <label for="start_date">Start Date (optional)</label><br />
+        <input id="start_date" name="start_date" type="text" value="{{ start_date }}" placeholder="2026-03-01 00:00:00" size="60" />
+        <br /><br />
+
+        <label for="end_date">End Date (optional)</label><br />
+        <input id="end_date" name="end_date" type="text" value="{{ end_date }}" placeholder="2026-03-25 23:59:59" size="60" />
+        <br />
+        <button type="submit">Run Vulnerable Query</button>
+    </form>
+
+    {% if query_text %}
+    <h2>Executed SQL</h2>
+    <pre>{{ query_text }}</pre>
+    {% endif %}
+
+    {% if error %}
+    <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    {% if rows %}
+    <h2>Results</h2>
+    <table border="1" cellspacing="0" cellpadding="6">
+        <thead>
+            <tr>
+                {% for header in headers %}
+                <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                {% for cell in row %}
+                <td>{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% elif query_text and not error %}
+    <p>Query ran successfully but returned no rows.</p>
+    {% endif %}
+
+    <h2>SQL Injection Test Payloads</h2>
+    <ul>
+        <li><code>Temperature_Reactor_A</code> (normal baseline)</li>
+        <li><code>Temperature_Reactor_A' OR '1'='1</code> (boolean injection, returns many rows)</li>
+        <li><code>' UNION SELECT id, username, password, role, created_at, 'N/A', 'N/A' FROM users --</code> (union test)</li>
+        <li><code>Temperature_Reactor_A' AND '1'='2</code> (false condition, likely no rows)</li>
+    </ul>
+
+    <p><a href="http://localhost:5005/dashboard">Back to Historian Dashboard</a></p>
+    <p><a href="http://localhost:5001/dashboard">Back to Workstation Dashboard</a></p>
+</body>
+</html>

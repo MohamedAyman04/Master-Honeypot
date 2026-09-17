@@ -23,9 +23,32 @@ import argparse
 import urllib.request
 import urllib.error
 
+def resolve_default_host():
+    env_val = os.getenv("RPI_HOST", "")
+    candidates = []
+    if env_val:
+        for h in env_val.split(","):
+            h = h.strip()
+            if h and h not in candidates:
+                candidates.append(h)
+    for default_ip in ["172.20.10.8", "192.168.1.8"]:
+        if default_ip not in candidates:
+            candidates.append(default_ip)
+    for host in candidates:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.8)
+            if s.connect_ex((host, 502)) == 0 or s.connect_ex((host, 8080)) == 0:
+                s.close()
+                return host
+            s.close()
+        except Exception:
+            pass
+    return candidates[0]
+
 # Determine host from CLI or Environment
 parser = argparse.ArgumentParser(description="Test Raspberry Pi SoftPLC Services")
-parser.add_argument("--host", default=os.getenv("RPI_HOST", "172.20.10.8"), help="Raspberry Pi IP address")
+parser.add_argument("--host", default=resolve_default_host(), help="Raspberry Pi IP address")
 parser.add_argument("--modbus-port", type=int, default=502, help="Modbus TCP port (default 502)")
 parser.add_argument("--webvisu-port", type=int, default=8080, help="WebVisu HTTP port (default 8080)")
 parser.add_argument("--opcua-port", type=int, default=4840, help="OPC UA port (default 4840)")

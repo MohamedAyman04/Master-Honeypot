@@ -17,7 +17,31 @@ import struct
 import subprocess
 import argparse
 
-PI_HOST = os.getenv("RPI_HOST", "192.168.1.8")
+def resolve_pi_host():
+    env_val = os.getenv("RPI_HOST", "")
+    candidates = []
+    if env_val:
+        for h in env_val.split(","):
+            h = h.strip()
+            if h and h not in candidates:
+                candidates.append(h)
+    for default_ip in ["172.20.10.8", "192.168.1.8"]:
+        if default_ip not in candidates:
+            candidates.append(default_ip)
+    
+    for host in candidates:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.8)
+            if s.connect_ex((host, 22)) == 0 or s.connect_ex((host, 502)) == 0:
+                s.close()
+                return host
+            s.close()
+        except Exception:
+            pass
+    return candidates[0]
+
+PI_HOST = resolve_pi_host()
 PI_USER = os.getenv("RPI_USER", "mohamed-ayman")
 PI_PASS = os.getenv("RPI_PASS", "mohamed2004")
 

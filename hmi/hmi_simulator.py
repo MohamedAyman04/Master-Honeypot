@@ -11,11 +11,15 @@ Detects replay attacks by checking for FLAT historian values while PLC changes.
 import time
 import os
 import uuid
+import json
+import redis
 from pymodbus.client import ModbusTcpClient
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 PLC_IP     = os.environ.get('PLC_IP',        'plc_simulator')
+REDIS_HOST = os.environ.get('REDIS_HOST',    'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 TOKEN      = os.environ.get('INFLUX_TOKEN',   'supersecrettoken')
 ORG        = os.environ.get('INFLUX_ORG',     'my_refinery')
 BUCKET     = os.environ.get('INFLUX_BUCKET',  'sensor_logs')
@@ -37,6 +41,25 @@ print(f"HMI/Historian Bridge started [session={SESSION_ID}]...")
 db_client = InfluxDBClient(url=INFLUX_URL, token=TOKEN, org=ORG)
 write_api  = db_client.write_api(write_options=SYNCHRONOUS)
 query_api  = db_client.query_api()
+
+try:
+    redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True, socket_connect_timeout=2)
+except Exception:
+    redis_client = None
+
+def is_hil_active() -> bool:
+    """Check if physical Raspberry Pi hardware bridge is actively publishing telemetry."""
+    if not redis_client:
+        return False
+    try:
+        raw = redis_client.get("rpi_plc_state")
+        if raw:
+            st = json.loads(raw)
+            if time.time() - float(st.get("timestamp", 0)) < 8.0:
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def read_plc():
@@ -174,6 +197,13 @@ def log_hmi_access(endpoint: str, src_ip: str = "historian_bridge", http_code: i
 poll_count = 0
 while True:
     try:
+        if is_hil_active():
+            poll_count += 1
+            if poll_count % 20 == 0:
+                print("[HIL ACTIVE] Raspberry Pi hardware bridge is publishing canonical telemetry. Historian bridge in monitoring standby.")
+            time.sleep(POLL_INTERVAL)
+            continue
+
         start_ts = time.time_ns()
         data = read_plc()
         poll_count += 1
