@@ -1,0 +1,14 @@
+FROM master-honeypot-workstation-1:latest
+
+WORKDIR /app
+
+# Copy updated components and honeytokens
+COPY components/ ./components/
+COPY database-files/ ./database-files/
+COPY workstation_run.py .
+
+RUN mkdir -p /app/logs /app/database-files/workstations /app/database-files/honeytokens
+
+EXPOSE 5001
+
+CMD ["python", "workstation_run.py"]

@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
 from .models import User
 from .app import log_login_attempt_detailed, log_successful_login, log_failed_login, log_activity
@@ -30,6 +31,14 @@ def _device_profile():
 
 @auth_bp.before_app_request
 def track_request_in():
+    # Reverse proxy gateway authentication bridge
+    if request.headers.get('X-Gateway-Auth') == 'true':
+        gw_user = request.headers.get('X-Gateway-User')
+        if gw_user:
+            session['logged_in'] = True
+            session['user'] = gw_user
+            session['role'] = request.headers.get('X-Gateway-Role', 'operator')
+
     if request.path.startswith('/static') or request.path == '/activity':
         return
 
@@ -287,6 +296,99 @@ def terminal_exec():
     except Exception:
         pass
 
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        cmd_clean = cmd.strip()
+        cmd_lower = cmd_clean.lower()
+        err = ""
+        if cmd_lower in ("ls", "ls -l", "ls -la", "dir"):
+            out = (
+                "total 384\n"
+                "-rw-r--r-- 1 eng_operator eng_operator 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.s7p\n"
+                "-rw------- 1 eng_operator eng_operator   4096 Sep 19 14:03 SCADA_Admin_Master_Keys.kdbx\n"
+                "-rw-r--r-- 1 eng_operator eng_operator  84112 Sep 15 11:45 Safety_Interlock_Bypass_Codes.pdf\n"
+                "-rw-r--r-- 1 eng_operator eng_operator  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
+                "-rw-r--r-- 1 eng_operator eng_operator    528 Sep 20 18:22 historian_connection.conf\n"
+                "drwxr-xr-x 2 eng_operator eng_operator   4096 Sep 21 00:00 backups"
+            )
+        elif "scada_admin_master_keys.kdbx" in cmd_lower:
+            out = (
+                "[KDBX-CANARY-TOKEN-V4]\n"
+                "HEADER: HONEYTOKEN_ID=HT-KDBX-9821-MASTER\n"
+                "SIGNATURE: 0x9AA2D9BF03040002\n"
+                "COMMENT: Critical Industrial Infrastructure Credentials Vault - Level 2 / Level 3 Plant Access\n"
+                "ENTRIES:\n"
+                "1. Host: 192.168.99.10 (Siemens S7-1500) -> User: plc_engineer, Pass: S7_Safety_Override#2026!\n"
+                "2. Host: 192.168.99.12 (Modbus FCCU) -> User: modbus_admin, Pass: ModbusCracking2026$$\n"
+                "3. Host: 192.168.99.50 (Historian Root) -> User: historian_root, Pass: MasterHistorianKey_9918237\n"
+            )
+        elif "safety_interlock_bypass_codes.pdf" in cmd_lower:
+            out = (
+                "================================================================================\n"
+                "REFINERY EMERGENCY SHUTDOWN (ESD) OVERRIDE DIRECTIVE & BYPASS MATRIX\n"
+                "CLASSIFICATION: CONFIDENTIAL // OT SAFETY CRITICAL\n"
+                "DOCUMENT ID: ESD-BYPASS-SEC-2026-04\n"
+                "CANARY TOKEN: CANARY-DOC-ESD-OVERRIDE-9942\n"
+                "================================================================================\n"
+                "Safety PLC Address: 192.168.99.10\n"
+                "Modbus Register: Coil 0x002A (Address 40042)\n"
+                "Override Value: 0x0001 (FORCE HIGH)\n"
+                "ESD Master Bypass Auth Key: ESD-KEY-ALPHA-9942-MASTER\n"
+            )
+        elif "refinery_plc_logic_backup_2026.s7p" in cmd_lower:
+            out = (
+                "SIMATIC_STEP7_PROJECT_BACKUP_V5.6\n"
+                "PROJECT_NAME: REFINERY_DISTILLATION_MAIN_2026\n"
+                "PLC_TYPE: SIEMENS_CPU_414_3_PN_DP\n"
+                "STATION_IP: 192.168.99.10\n"
+                "[BLOCK_DB1] DB_NAME: 'SAFETY_INTERLOCK_VARS' DBX0.0: 'EMERGENCY_STOP_ACTUATED'=FALSE\n"
+            )
+        elif "historian_connection.conf" in cmd_lower:
+            out = (
+                "[HISTORIAN_REMOTE]\n"
+                "HOST=192.168.99.50\n"
+                "PORT=8086\n"
+                "ORG=my_refinery\n"
+                "BUCKET=sensor_logs\n"
+                "TOKEN=supersecrettoken_canary_ht88921\n"
+            )
+        elif cmd_lower in ("whoami",):
+            out = "eng_operator"
+        elif cmd_lower in ("id",):
+            out = "uid=1001(eng_operator) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)"
+        elif cmd_lower in ("pwd",):
+            out = "/home/eng_operator/scada_workspace"
+        elif cmd_lower in ("uname -a", "uname"):
+            out = "Linux ws-eng-decoy-01 5.15.0-89-generic #99-Ubuntu SMP x86_64 GNU/Linux"
+        elif cmd_lower in ("ifconfig", "ip a", "ip addr"):
+            out = (
+                "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n"
+                "        inet 192.168.99.21  netmask 255.255.255.0  broadcast 192.168.99.255\n"
+                "        ether 02:42:c0:a8:63:15  txqueuelen 0  (Ethernet)\n"
+            )
+        elif "cat /etc/passwd" in cmd_lower:
+            out = (
+                "root:x:0:0:root:/root:/bin/bash\n"
+                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
+                "scada_admin:x:1000:1000:SCADA Administrator:/home/scada_admin:/bin/bash\n"
+                "eng_operator:x:1001:1001:Field Engineering Operator:/home/eng_operator:/bin/bash\n"
+                "historian_svc:x:1002:1002:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
+            )
+        elif "mbtget" in cmd_lower or "modbus" in cmd_lower:
+            out = "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12"
+        elif "nmap" in cmd_lower or "ping" in cmd_lower:
+            out = (
+                "Starting Nmap 7.80 ( https://nmap.org )\n"
+                "Nmap scan report for plc-safety-01 (192.168.99.10)\n"
+                "Host is up (0.00041s latency).\n"
+                "PORT    STATE SERVICE\n"
+                "102/tcp open  iso-tsap (Siemens S7)\n"
+                "502/tcp open  mbap (Modbus TCP)\n"
+            )
+        else:
+            out = f"Command executed: {cmd_clean}"
+
+        return jsonify({'output': out, 'error': err})
+
     try:
         import paramiko
         ssh = paramiko.SSHClient()
@@ -334,13 +436,18 @@ def l2_status():
     GET /api/l2/status
     Proxies the Level 2 physics system status to the L3 dashboard.
     No login required — reflects the unauthenticated nature of the L2 API.
-
-    Returns:
-      { "system": "PUMP_STATION_01", "status": "RUNNING", "valve": "OPEN",
-        "alerts": [], "timestamp": "..." }
     """
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_STATUS || TARGET=L2_PHYSICS_API")
+
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        return jsonify({
+            "system": "PUMP_STATION_DECOY_01",
+            "status": "RUNNING",
+            "valve": "OPEN",
+            "alerts": [],
+            "timestamp": "2026-09-21T00:00:00Z"
+        })
 
     data = l2_bridge.get_physics_status()
     return jsonify(data)
@@ -350,14 +457,20 @@ def l2_status():
 def l2_metrics():
     """
     GET /api/l2/metrics
-    Returns live physical process telemetry pulled from the L2 physics API:
-      pressure (PSI), temperature (°C), flow_rate (L/s), pump_rpm, valve_pos, viscosity
-
-    This is the primary data source for the real-time dashboard chart.
-    ATT&CK: T0802 — Automated Collection
+    Returns live physical process telemetry pulled from the L2 physics API.
     """
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_METRICS || TARGET=L2_PHYSICS_API")
+
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        return jsonify({
+            "pressure": 104.2,
+            "temperature": 69.5,
+            "flow_rate": 42.1,
+            "pump_rpm": 1820,
+            "valve_pos": 1.0,
+            "viscosity": 2.4
+        })
 
     data = l2_bridge.get_physics_metrics()
     return jsonify(data)
@@ -368,15 +481,15 @@ def l2_alerts():
     """
     GET /api/l2/alerts
     Returns recent security alerts from the Level 2 historian (InfluxDB).
-    Optional query params:
-      - lookback : InfluxDB range string (default: -1h)
-      - limit    : max records (default: 50)
     """
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     lookback   = request.args.get('lookback', '-1h')
     limit      = min(int(request.args.get('limit', 50)), 200)
 
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_ALERTS || LOOKBACK={lookback} || LIMIT={limit}")
+
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        return jsonify({'count': 0, 'alerts': []})
 
     alerts = l2_bridge.get_l2_alerts(lookback=lookback, limit=limit)
     return jsonify({'count': len(alerts), 'alerts': alerts})
@@ -386,13 +499,18 @@ def l2_alerts():
 def l2_summary():
     """
     GET /api/l2/summary
-    Aggregated cross-layer summary for the L3 dashboard landing page:
-      - total_alerts, alert_breakdown
-      - physical_process (live telemetry from L2)
-      - ml_engine_ready status
+    Aggregated cross-layer summary for the L3 dashboard landing page.
     """
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_SUMMARY || TARGET=L2_HISTORIAN_API")
+
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        return jsonify({
+            "total_alerts": 0,
+            "alert_breakdown": {},
+            "physical_process": {"status": "NORMAL", "telemetry": {"pressure": 104.2}},
+            "ml_engine_ready": True
+        })
 
     data = l2_bridge.get_l2_summary()
     return jsonify(data)
@@ -402,20 +520,8 @@ def l2_summary():
 def l2_control():
     """
     POST /api/l2/control
-    !! INTENTIONALLY WEAK ACCESS CONTROL — any logged-in user can call this !!
-
     Sends an actuator control command to the Level 2 physics engine.
-    Demonstrates the full cross-layer attack path from a compromised
-    Level 3 workstation down to the OT process layer.
-
-    Body (JSON):
-      { "pump_rpm": 3000, "valve_pos": 0.0 }
-
-    ATT&CK: T0855 — Unauthorized Command Message
-    Kill Chain: Actions on Objectives
     """
-    # Only require a session — intentionally NOT restricting to operator/admin.
-    # This simulates a privilege misconfiguration in the L3 application.
     if not session.get('logged_in'):
         return jsonify({'error': 'unauthorized'}), 401
 
@@ -434,6 +540,12 @@ def l2_control():
             f"MITRE=T0855 || KILL_CHAIN=Actions_on_Objectives"
         ),
     )
+
+    if os.getenv("IS_DECOY", "false").lower() == "true":
+        return jsonify({
+            "status": "ok",
+            "message": "Actuator setpoint applied to decoy safety controller"
+        })
 
     # Also push a cross-layer event into L2's historian so the ML engine sees it
     l2_bridge.push_event_to_l2(

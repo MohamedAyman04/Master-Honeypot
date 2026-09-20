@@ -24,7 +24,9 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 │  • ics_historian_api    :5001  ← Authenticated Level-3 REST Gateway                              │
 │  • ics_scada_ssh        :2222  ← Engineer/Operator SSH Pivot Host (192.168.50.10)                │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
-│  LEVEL 3.5 — Industrial DMZ (dmz-net: externally reachable honeynet)                             │
+│  LEVEL 3.5 — Industrial DMZ & Honeypot Sandbox Deception (dmz-net / sandbox-net)                 │
+│  • dmz_gateway          :8088  ← Secure OT Access Gateway (MFA/2FA + Dual-World Routing Engine)    │
+│  • ws_decoy_eng         :5026  ← Sandboxed Decoy Workstation (Honeypot Zone, 192.168.99.21)       │
 │  • plc_simulator        :502   ← High-Interaction Modbus TCP Honeypot                            │
 │  • ics_s7_plc           :102   ← Siemens S7comm Honeypot (S7-300 DB1 Emulation)                  │
 │  • ics_dnp3             :20000 ← DNP3 Outstation Honeypot (Water/Power Utility Protocol)         │
@@ -62,6 +64,9 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 
 | Service | Port | URL | Credentials / Notes |
 |---|---|---|---|
+| **DMZ OT Secure Gateway** | `8088` / `8443` | `http://localhost:8088` | `operator` / `Operator2026!` + 2FA TOTP (bypass: `999888`) |
+| **Gateway Diagnostics** | `8088` | `http://localhost:8088/status` | Live routing audit, telemetry, & active quarantine list |
+| **Decoy Workstation** | `5026` | `http://localhost:5026` | Sandboxed Honeypot Zone with canary honeytokens |
 | **Grafana Dashboards** | `3005` | `http://localhost:3005` | `admin` / `admin` (Level 2 SCADA & Forensics) |
 | **SCADA Web HMI** | `8060` | `http://localhost:8060` | Interactive operator console & pump controls |
 | **Raspberry Pi WebVisu** | `8080` | `http://172.20.10.8:8080` | Native CODESYS HTML5 HMI & `/api/status` |
@@ -83,7 +88,41 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 
 ---
 
-## 3. Physical Raspberry Pi 4B & CODESYS Integration
+## 3. DMZ Secure OT Access Gateway & Dual-World Deception Routing
+
+The framework implements a dynamic dual-world routing engine at Purdue Level 3.5 to achieve active attacker deception while isolating production OT operations:
+
+```
+[Remote User / Ingress]
+         │
+         ▼
+[DMZ Secure OT Access Gateway (:8088)]
+   ├── 1. Deep Anomaly & Exploit Inspection (SQLi, Traversal, Scanner UA, Wordlists)
+   ├── 2. Primary Credential Authentication (operator / engineer)
+   └── 3. RFC 6238 TOTP Multi-Factor Authentication (MFA / 2FA / OTP)
+         │
+         ├──────────────────────────────────────────────┐
+         ▼ (Valid Auth + OTP)                           ▼ (Attack / Anomaly / Brute Force)
+[Real Industrial Area (Level 3 / Level 2)]   [Sandboxed Honeypot Zone (Level 3.5)]
+  • ws_eng_01 (192.168.50.21:5001)             • ws_decoy_eng (192.168.99.21:5001)
+  • Real InfluxDB Historian (:8086)            • Isolated network: sandbox-net
+  • Real SCADA Actuators & Physics API         • Canary Honeytokens (.kdbx, .pdf, .s7p)
+                                               • Decoy Historian API (:5002)
+                                               • Simulated SCADA Shell & Telemetry
+```
+
+### Anomaly-Driven Deception Routing Policy
+- **Legitimate Operator Path**: Users providing authorized corporate credentials (`operator`/`Operator2026!`, `engineer`/`Engineer2026!`) and verified 6-digit TOTP tokens are granted `REAL_INDUSTRIAL` access, seamlessly reverse-proxied to `ws_eng_01` on `enterprise-net`.
+- **Active Attacker Quarantine**: Requests triggering exploit patterns (SQL injection, path traversal), reconnaissance user-agents (`sqlmap`, `nikto`, `hydra`, `nmap`), default ICS dictionary spraying (`admin`, `codesys`, `siemens`), or $\ge 3$ failed logins within 30 seconds are silently trapped. The gateway presents a fake successful login and diverts the session to `ws_decoy_eng` on `sandbox-net`.
+- **Canary Honeytoken Traps**: The decoy workstation exposes enticing operational files:
+  - `SCADA_Admin_Master_Keys.kdbx`: KeePass credential vault with simulated PLC keys.
+  - `Safety_Interlock_Bypass_Codes.pdf`: Emergency shutdown directive with fake Modbus coil overrides (`0x002A`).
+  - `Refinery_PLC_Logic_Backup_2026.s7p`: Siemens S7 ladder logic project backup.
+- **Unsupervised ML Data Pipeline**: All attacker actions, dwell times, and command attempts in the decoy sandbox stream directly to InfluxDB (`honeypot_attacker_telemetry`) and `story_logger` (`logs/general logs.jsonl`), fueling the unsupervised **LSTM-Autoencoder** and Isolation Forest clustering models.
+
+---
+
+## 4. Physical Raspberry Pi 4B & CODESYS Integration
 
 The system supports seamless hardware-in-the-loop (HIL) switching between pure container simulation and a physical hardware controller.
 
@@ -108,7 +147,7 @@ Directly queries the physical Broadcom BCM2711 SoC and the running SoftPLC Linux
 
 ---
 
-## 4. Six-Layer Cross-Layer Detection Architecture
+## 5. Six-Layer Cross-Layer Detection Architecture
 
 ```
 [Layer 1: Protocol Semantic Verification] ──► Modbus deep packet inspection & forced-write rules
@@ -133,7 +172,7 @@ $$A_{\text{NMG}} = A_{\text{net}} \lor \left( |\delta_P| > \tau_{\text{NMG}} \la
 
 ---
 
-## 5. Benchmark Performance Across Multi-Hour Campaigns
+## 6. Benchmark Performance Across Multi-Hour Campaigns
 
 Benchmark results evaluated via `python scripts/canonical_evaluation.py` (`val_frac=0.45`, `SEED=42`, strict validation threshold calibration, recovery masking):
 
@@ -153,7 +192,7 @@ Benchmark results evaluated via `python scripts/canonical_evaluation.py` (`val_f
 
 ---
 
-## 6. Continuous Physical Process Dynamics
+## 7. Continuous Physical Process Dynamics
 
 The pipeline transport loop (`physics/physics_engine.py`) models continuous fluid mechanics via coupled ordinary differential equations solved at 100ms intervals:
 
@@ -169,7 +208,7 @@ Where $R(t)$ is pump motor RPM, $V(t) \in [0.0, 1.0]$ is control valve position,
 
 ---
 
-## 7. Automated 9-Phase Cyber-Attack Campaigns
+## 8. Automated 9-Phase Cyber-Attack Campaigns
 
 The attack suite (`attacker_node/attack_suite.py`) executes an end-to-end cyber kill chain mapped directly to the MITRE ATT&CK for ICS framework:
 
@@ -187,7 +226,7 @@ The attack suite (`attacker_node/attack_suite.py`) executes an end-to-end cyber 
 
 ---
 
-## 8. Repository Layout & Organization
+## 9. Repository Layout & Organization
 
 The codebase is organized into dedicated functional parent directories:
 
@@ -195,13 +234,14 @@ The codebase is organized into dedicated functional parent directories:
 Master-Honeypot/
 ├── .env                       # Central environment variables (passwords, tokens, RPI_HOST)
 ├── .gitignore                 # Standard version control ignore rules
-├── docker-compose.yml         # 28-container production orchestration file
+├── docker-compose.yml         # 30-container production orchestration file
 ├── README.md                  # Comprehensive framework documentation
 ├── requirements.txt           # Python package dependencies
 ├── general logs.jsonl -> logs # Backward compatibility symlink for container mounts
 │
 ├── attacker_node/             # Kali Linux penetration node & MITRE attack suite
 ├── codesys_pi/                # CODESYS SoftPLC runtime files, systemd unit, deploy scripts
+├── dmz_gateway/               # DMZ Secure OT Access Gateway, MFA/2FA, & Deception Router
 ├── fake_plc/                  # Low-interaction Modbus honeypot tarpit
 ├── grafana_dashboards/        # Production Grafana dashboard definitions (JSON)
 ├── grafana_provisioning/      # Automated Grafana datasource and dashboard provisioning
@@ -228,12 +268,13 @@ Master-Honeypot/
 │   └── canonical_evaluation.py             # Authoritative 6-layer benchmark evaluator
 ├── shared/                    # Shared data structures, MITRE mapping & StoryClient
 ├── story_logger/              # Structured story logger microservice
-└── workstations/              # Purdue Level 3 enterprise workstation cluster
+└── workstations/              # Purdue Level 3 enterprise & decoy workstation cluster
+    └── database-files/honeytokens/ # High-value canary honeytokens (.kdbx, .pdf, .s7p)
 ```
 
 ---
 
-## 9. Quickstart & Verification Commands
+## 10. Quickstart & Verification Commands
 
 ### 1. Launch the Full Honeypot Stack
 ```bash
@@ -241,7 +282,7 @@ Master-Honeypot/
 git clone git@github.com:MohamedAyman04/Master-Honeypot.git
 cd Master-Honeypot
 
-# Start all 28 containers in background
+# Start all 30 containers in background
 docker compose up --build -d
 
 # Verify container health

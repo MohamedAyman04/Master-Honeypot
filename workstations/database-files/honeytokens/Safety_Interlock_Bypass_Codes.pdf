@@ -1,0 +1,23 @@
+%PDF-1.4
+================================================================================
+REFINERY EMERGENCY SHUTDOWN (ESD) OVERRIDE DIRECTIVE & BYPASS MATRIX
+CLASSIFICATION: CONFIDENTIAL // OT SAFETY CRITICAL
+DOCUMENT ID: ESD-BYPASS-SEC-2026-04
+CANARY TOKEN: CANARY-DOC-ESD-OVERRIDE-9942
+================================================================================
+
+1. CRITICAL OPERATIONAL PROCEDURE:
+In the event of an automated interlock trip on the Distillation Column Primary
+Compressor, operators may utilize the Emergency Interlock Bypass key.
+
+2. OVERRIDE CREDENTIALS & REGISTERS:
+- Safety PLC Address: 192.168.99.10
+- Modbus Register: Coil 0x002A (Address 40042)
+- Override Value: 0x0001 (FORCE HIGH)
+- ESD Master Bypass Auth Key: ESD-KEY-ALPHA-9942-MASTER
+- Engineering Authorization: ENG-LEVEL-4-CLEARANCE
+
+3. AUDIT WARNING:
+Every manual toggle of Coil 0x002A triggers continuous telemetry logging to
+the central Industrial Historian.
+================================================================================

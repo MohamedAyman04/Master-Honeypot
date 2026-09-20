@@ -611,6 +611,7 @@ services:
       - monitor-net
       - l2l3-bridge-net
       - enterprise-net
+      - sandbox-net
     restart: unless-stopped
 
   # ── Honeypot Historian API (DMZ-facing decoy) ─────────────────────────────────
@@ -658,6 +659,68 @@ services:
       - historian
     restart: unless-stopped
 
+  # ── Purdue Level 3.5 — DMZ Secure OT Access Gateway & Dual-World Router ─────
+  dmz_gateway:
+    build:
+      context: ./dmz_gateway
+      dockerfile: Dockerfile
+    container_name: dmz_gateway
+    hostname: dmz-gateway-01
+    ports:
+      - "8088:8088"
+      - "8443:8443"
+    environment:
+      - GATEWAY_PORT=8088
+      - REAL_WORKSTATION_URL=http://ws_eng_01:5001
+      - REAL_HISTORIAN_URL=http://historian_api:5000
+      - DECOY_WORKSTATION_URL=http://ws_decoy_eng:5001
+      - DECOY_HISTORIAN_URL=http://honeypot_historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - INFLUX_URL=http://historian:8086
+      - INFLUX_TOKEN=${INFLUX_TOKEN:-supersecrettoken}
+      - INFLUX_ORG=${INFLUX_ORG:-my_refinery}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-sensor_logs}
+      - PYTHONUNBUFFERED=1
+    networks:
+      - dmz-net
+      - enterprise-net
+      - sandbox-net
+      - monitor-net
+    depends_on:
+      - story_logger
+      - historian
+    restart: unless-stopped
+
+  # ── Purdue Level 3.5 — Sandboxed Decoy Workstation (Honeypot Deception Zone) ──
+  workstation_decoy_eng:
+    build:
+      context: ./workstations
+      dockerfile: Dockerfile.decoy
+    container_name: ws_decoy_eng
+    hostname: ws-eng-decoy-01
+    mac_address: "02:42:c0:a8:63:15"
+    ports:
+      - "5026:5001"
+    environment:
+      - WORKSTATION_COMPONENT=workstation_decoy
+      - WORKSTATION_DB_NAME=workstation_1.db
+      - WORKSTATION_DEVICE_IP=192.168.99.21
+      - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:15
+      - WORKSTATION_SERIAL=FAC-ENG-DECOY-9901
+      - WORKSTATION_MODEL=Siemens IPC477E Decoy Engineering PC
+      - WORKSTATION_VENDOR=Siemens Industrial
+      - LEVEL2_PHYSICS_URL=http://honeypot_historian_api:5000
+      - LEVEL2_HISTORIAN_URL=http://honeypot_historian_api:5000
+      - STORY_LOGGER_URL=http://story_logger:8600
+      - STORY_RUN_ID=${STORY_RUN_ID}
+      - IS_DECOY=true
+    networks:
+      sandbox-net:
+        ipv4_address: 192.168.99.21
+    depends_on:
+      - story_logger
+    restart: unless-stopped
+
 volumes:
   shared-data:
   influx-data:
@@ -683,6 +746,13 @@ networks:
     ipam:
       config:
         - subnet: 192.168.50.0/24
+
+  # Purdue Level 3.5 — Honeypot Sandbox Deception Network
+  sandbox-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.99.0/24
 
   # Shared bridge between Level 2 and Level 3 stacks.
   # Create before first run:  docker network create l2l3-bridge-net --subnet 172.28.0.0/24
