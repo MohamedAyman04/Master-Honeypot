@@ -205,6 +205,8 @@ def main():
                         .tag("device", "raspberry_pi_4b") \
                         .tag("plc_type", "codesys_softplc") \
                         .tag("host", current_host) \
+                        .tag("zone", "sandbox_honeypot") \
+                        .tag("architecture_role", "hil_deception_target") \
                         .field("pressure", pressure) \
                         .field("flow_rate", flow_rate) \
                         .field("temperature", temperature) \
@@ -219,11 +221,13 @@ def main():
                         .time(now, WritePrecision.NS)
                     write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=point)
 
-                    # Dedicated Edge Hardware & Forensics Measurement
+                    # Dedicated Edge Hardware & Forensics Measurement (Sandboxed HIL Target)
                     hw_point = Point("edge_hardware_telemetry") \
                         .tag("device", "raspberry_pi_4b") \
                         .tag("soc", "broadcom_bcm2711") \
                         .tag("host", current_host) \
+                        .tag("zone", "sandbox_honeypot") \
+                        .tag("architecture_role", "hil_deception_target") \
                         .field("soc_temperature", soc_temp) \
                         .field("cpu_load", cpu_load) \
                         .field("cpu_frequency_ghz", cpu_freq_ghz) \
