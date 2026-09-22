@@ -27,6 +27,7 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 │  LEVEL 3.5 — Industrial DMZ & Honeypot Sandbox Deception (dmz-net / sandbox-net)                 │
 │  • dmz_gateway          :8088  ← Secure OT Access Gateway (MFA/2FA + Dual-World Routing Engine)    │
 │  • ws_decoy_eng         :5026  ← Sandboxed Decoy Workstation (Honeypot Zone, 192.168.99.21)       │
+│  • ws_decoy_ops         :5027  ← Sandboxed Decoy Operator Console (Honeypot Zone, 192.168.99.31)  │
 │  • plc_simulator        :502   ← High-Interaction Modbus TCP Honeypot                            │
 │  • ics_s7_plc           :102   ← Siemens S7comm Honeypot (S7-300 DB1 Emulation)                  │
 │  • ics_dnp3             :20000 ← DNP3 Outstation Honeypot (Water/Power Utility Protocol)         │
@@ -37,7 +38,6 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 │  • ics_ml_engine        :8001  ← 6-Layer Cross-Layer ML Detection Engine (IF, LSTM, CUSUM, NMG) │
 │  • ics_historian        :8086  ← InfluxDB v2.7 Time-Series Historian                             │
 │  • ics_grafana          :3005  ← SCADA Process, Forensics & Security Dashboards                  │
-│  • ics_hmi              :8060  ← Dash SCADA Operator Web Console with Live Controls             │
 │  • story_logger         :8600  ← Structured Event Narrative Bus & MITRE ATT&CK Correlator        │
 │  • ics_log_dashboard    :8502  ← Streamlit Kill-Chain Log Browser & Analysis Console             │
 │  • ics_rpi_bridge              ← Dynamic Hardware Bridge (Auto-Discovery & Fallback Standby)     │
@@ -64,10 +64,11 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 
 | Service | Port | URL | Credentials / Notes |
 |---|---|---|---|
-| **DMZ OT Secure Gateway** | `8088` / `8443` | `http://localhost:8088` | `operator` / `Operator2026!` + 2FA TOTP (bypass: `999888`) |
-| **Gateway Diagnostics** | `8088` | `http://localhost:8088/status` | Live routing audit, telemetry, & active quarantine list |
-| **Decoy Workstation** | `5026` | `http://localhost:5026` | Sandboxed Honeypot Zone with canary honeytokens |
-| **Grafana Dashboards** | `3005` | `http://localhost:3005` | `admin` / `admin` (Level 2 SCADA & Forensics) |
+| **DMZ OT Secure Gateway** | `8088` / `8443` | `http://localhost:8088` | `operator` / `Operator2026!` or `engineer` / `Engineer2026!` + TOTP (bypass: `999888`) |
+| **Gateway Diagnostics** | `8088` | `http://localhost:8088/status` | Redirects to Grafana Telemetry Dashboard; JSON at `/api/status` |
+| **Decoy Engineering WS** | `5026` | `http://localhost:5026` | Sandboxed Decoy Workstation (Siemens Field PG M6 Canary Honeytokens) |
+| **Decoy Operator Console**| `5027` | `http://localhost:5027` | Sandboxed Decoy Operator Console (Rockwell ASEM 6300B Canary Honeytokens) |
+| **Grafana Dashboards** | `3005` | `http://localhost:3005` | `admin` / `admin` (Level 2 SCADA, Forensics & DMZ Gateway Telemetry) |
 | **SCADA Web HMI** | `8060` | `http://localhost:8060` | Interactive operator console & pump controls |
 | **Raspberry Pi WebVisu** | `8080` | `http://172.20.10.8:8080` | Native CODESYS HTML5 HMI & `/api/status` |
 | **Streamlit Log Browser**| `8502` | `http://localhost:8502` | Live kill-chain and forensic log viewer |
@@ -104,20 +105,21 @@ The framework implements a dynamic dual-world routing engine at Purdue Level 3.5
          ├──────────────────────────────────────────────┐
          ▼ (Valid Auth + OTP)                           ▼ (Attack / Anomaly / Brute Force)
 [Real Industrial Area (Level 3 / Level 2)]   [Sandboxed Honeypot Zone (Level 3.5)]
-  • ws_eng_01 (192.168.50.21:5001)             • ws_decoy_eng (192.168.99.21:5001)
+  • ws_eng_01 (192.168.50.21:5001)             • ws_decoy_eng (192.168.99.21:5001, host :5026)
+  • ws_ops_01 (192.168.50.31:5001)             • ws_decoy_ops (192.168.99.31:5001, host :5027)
   • Real InfluxDB Historian (:8086)            • Isolated network: sandbox-net
-  • Real SCADA Actuators & Physics API         • Canary Honeytokens (.kdbx, .pdf, .s7p)
+  • Real SCADA Actuators & Physics API         • Dynamic Raspberry Pi HIL / Physics Link
+                                               • Decoy Canary Honeytokens (.pdf, .txt, .xlsx, .kdbx)
                                                • Decoy Historian API (:5002)
                                                • Simulated SCADA Shell & Telemetry
 ```
 
 ### Anomaly-Driven Deception Routing Policy
-- **Legitimate Operator Path**: Users providing authorized corporate credentials (`operator`/`Operator2026!`, `engineer`/`Engineer2026!`) and verified 6-digit TOTP tokens are granted `REAL_INDUSTRIAL` access, seamlessly reverse-proxied to `ws_eng_01` on `enterprise-net`.
-- **Active Attacker Quarantine**: Requests triggering exploit patterns (SQL injection, path traversal), reconnaissance user-agents (`sqlmap`, `nikto`, `hydra`, `nmap`), default ICS dictionary spraying (`admin`, `codesys`, `siemens`), or $\ge 3$ failed logins within 30 seconds are silently trapped. The gateway presents a fake successful login and diverts the session to `ws_decoy_eng` on `sandbox-net`.
-- **Canary Honeytoken Traps**: The decoy workstation exposes enticing operational files:
-  - `SCADA_Admin_Master_Keys.kdbx`: KeePass credential vault with simulated PLC keys.
-  - `Safety_Interlock_Bypass_Codes.pdf`: Emergency shutdown directive with fake Modbus coil overrides (`0x002A`).
-  - `Refinery_PLC_Logic_Backup_2026.s7p`: Siemens S7 ladder logic project backup.
+- **Legitimate Operator Path**: Users providing authorized corporate credentials (`operator`/`Operator2026!`, `engineer`/`Engineer2026!`, or complex passwords `Cdu#Op2026!9xVm`/`Eng#Sys2026!8wQz`) and verified 6-digit TOTP tokens are granted `REAL_INDUSTRIAL` access, seamlessly reverse-proxied to `ws_ops_01` (operators) or `ws_eng_01` (engineers) on `enterprise-net`.
+- **Active Attacker Quarantine**: Requests triggering exploit patterns (SQL injection, path traversal), reconnaissance user-agents (`sqlmap`, `nikto`, `hydra`, `nmap`), default ICS dictionary spraying (`admin`, `codesys`, `siemens`, `password`), or $\ge 3$ failed logins within 30 seconds are silently trapped. The gateway presents a fake successful login and diverts the session to the decoy consoles on `sandbox-net`.
+- **Targeted Canary Honeytokens**:
+  - **Engineering Decoy (`ws_decoy_eng`, host :5026)**: Siemens Field PG M6 (`FAC-ENG-DECOY-9901`). Contains `SCADA_Admin_Master_Keys.kdbx`, `Safety_Interlock_Bypass_Codes.pdf`, and `Refinery_PLC_Logic_Backup_2026.s7p`.
+  - **Operator Decoy (`ws_decoy_ops`, host :5027)**: Rockwell Automation ASEM 6300B (`FAC-OPS-DECOY-9902`). Contains `Emergency_Shutdown_Procedure_SOP_Rev4.pdf`, `Shift_Handover_Log_CCR_2026.txt`, and `HMI_Alarm_Bypass_Matrix.xlsx`.
 - **Unsupervised ML Data Pipeline**: All attacker actions, dwell times, and command attempts in the decoy sandbox stream directly to InfluxDB (`honeypot_attacker_telemetry`) and `story_logger` (`logs/general logs.jsonl`), fueling the unsupervised **LSTM-Autoencoder** and Isolation Forest clustering models.
 
 ---
