@@ -48,6 +48,9 @@ def login():
     if request.method == 'GET':
         return render_template('gateway_login.html', error=None)
 
+    # Clear prior session state to ensure fresh evaluation
+    session.clear()
+
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
 
@@ -98,7 +101,8 @@ def login():
 
     # Step 2: Validate Corporate Credentials for Real Industrial Path
     user_record = config.VALID_USERS.get(username)
-    if not user_record or user_record['password'] != password:
+    valid_passwords = user_record.get('passwords', [user_record.get('password')]) if user_record else []
+    if not user_record or password not in valid_passwords:
         is_bf = anomaly_detector.record_failed_attempt(ip)
 
         telemetry_logger.log_event_to_story(

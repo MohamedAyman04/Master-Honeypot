@@ -679,8 +679,10 @@ services:
     environment:
       - GATEWAY_PORT=8088
       - REAL_WORKSTATION_URL=http://ws_eng_01:5001
+      - REAL_OPS_WORKSTATION_URL=http://ws_ops_01:5001
       - REAL_HISTORIAN_URL=http://historian_api:5000
       - DECOY_WORKSTATION_URL=http://ws_decoy_eng:5001
+      - DECOY_OPS_WORKSTATION_URL=http://ws_decoy_ops:5001
       - DECOY_HISTORIAN_URL=http://honeypot_historian_api:5000
       - STORY_LOGGER_URL=http://story_logger:8600
       - INFLUX_URL=http://historian:8086
@@ -688,6 +690,8 @@ services:
       - INFLUX_ORG=${INFLUX_ORG:-my_refinery}
       - INFLUX_BUCKET=${INFLUX_BUCKET:-sensor_logs}
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./dmz_gateway:/app
     networks:
       - dmz-net
       - enterprise-net

@@ -34,29 +34,34 @@ OTP_BASE32_SECRET = os.getenv("OTP_BASE32_SECRET", "JBSWY3DPEHPK3PXP")
 VALID_USERS = {
     # Primary Shift Operator
     "operator": {
-        "password": "Cdu#Op2026!9xVm",
+        "passwords": ["Operator2026!", "Cdu#Op2026!9xVm"],
+        "password": "Operator2026!",
         "role": "operator",
         "name": "Central Control Room Shift Operator"
     },
     "op_cdu_shift1": {
-        "password": "Cdu#Op2026!9xVm",
+        "passwords": ["Operator2026!", "Cdu#Op2026!9xVm"],
+        "password": "Operator2026!",
         "role": "operator",
         "name": "CDU-01 Senior Unit Operator"
     },
     # Process Automation Engineer
     "engineer": {
-        "password": "Eng#Sys2026!8wQz",
+        "passwords": ["Engineer2026!", "Eng#Sys2026!8wQz"],
+        "password": "Engineer2026!",
         "role": "engineer",
         "name": "Lead Process Automation Engineer"
     },
     "eng_process_lead": {
-        "password": "Eng#Sys2026!8wQz",
+        "passwords": ["Engineer2026!", "Eng#Sys2026!8wQz"],
+        "password": "Engineer2026!",
         "role": "engineer",
         "name": "Lead Process Automation Engineer"
     },
     # OT Cybersecurity Systems Auditor
     "admin": {
-        "password": "Sec#Audit2026!5vKp",
+        "passwords": ["Admin2026!", "Sec#Audit2026!5vKp"],
+        "password": "Admin2026!",
         "role": "admin",
         "name": "OT Systems Compliance Auditor"
     }
@@ -66,5 +71,5 @@ VALID_USERS = {
 HONEYPOT_WORDLIST = {
     "password", "123456", "root", "toor", "admin123",
     "scada", "codesys", "operator123", "engineer456", "plc", "siemens",
-    "operator2026!", "engineer2026!"
+    "guest", "test"
 }
