@@ -45,7 +45,8 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "justifyMode": "auto"
+        "justifyMode": "center",
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -72,7 +73,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 1)\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 1)\n  |> group()\n  |> count()",
           "refId": "A"
         }
       ]
@@ -101,7 +102,8 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "justifyMode": "auto"
+        "justifyMode": "center",
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -128,14 +130,14 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 0)\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 0 and r[\"routing_world\"] == \"REAL_INDUSTRIAL\")\n  |> group()\n  |> count()",
           "refId": "A"
         }
       ]
     },
     {
       "id": 4,
-      "title": "MFA Challenges Issued",
+      "title": "Total Ingress Sessions Evaluated",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -157,7 +159,8 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "justifyMode": "auto"
+        "justifyMode": "center",
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -184,18 +187,18 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> group()\n  |> count()",
           "refId": "A"
         }
       ]
     },
     {
       "id": 5,
-      "title": "Gateway Ingress Threats & Quarantines Over Time",
+      "title": "Threat Ingress & Quarantine Timeline",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 16,
+        "w": 15,
         "x": 0,
         "y": 6
       },
@@ -207,8 +210,12 @@
         "defaults": {
           "custom": {
             "drawStyle": "bars",
-            "fillOpacity": 50,
-            "lineWidth": 1
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
           }
         },
         "overrides": []
@@ -219,7 +226,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> aggregateWindow(every: v.windowPeriod, fn: count, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 1)\n  |> keep(columns: [\"_time\", \"_value\", \"tactic\"])\n  |> group(columns: [\"tactic\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: count, createEmpty: false)",
           "refId": "A"
         }
       ]
@@ -230,8 +237,8 @@
       "type": "piechart",
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 9,
+        "x": 15,
         "y": 6
       },
       "datasource": {
@@ -239,13 +246,26 @@
         "uid": "influxdb-l2"
       },
       "options": {
-        "displayLabels": [
-          "percent"
-        ],
+        "pieType": "pie",
+        "reduceOptions": {
+          "values": true,
+          "fields": "/^count$/",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "legend": {
           "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
@@ -254,7 +274,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> group(columns: [\"tactic\"])\n  |> count()\n  |> group()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 1)\n  |> keep(columns: [\"_time\", \"_value\", \"tactic\"])\n  |> group(columns: [\"tactic\"])\n  |> count()\n  |> rename(columns: {\"_value\": \"count\"})\n  |> group()",
           "refId": "A"
         }
       ]
@@ -264,7 +284,7 @@
       "title": "Real-Time Attacker Quarantine Audit Log",
       "type": "table",
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 14
@@ -273,13 +293,144 @@
         "type": "influxdb",
         "uid": "influxdb-l2"
       },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Actor Classification"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "attacker": {
+                        "color": "rgba(239, 68, 68, 0.25)",
+                        "index": 0,
+                        "text": "ATTACKER"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "operator": {
+                        "color": "rgba(16, 185, 129, 0.25)",
+                        "index": 1,
+                        "text": "OPERATOR"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "unknown": {
+                        "color": "rgba(234, 179, 8, 0.25)",
+                        "index": 2,
+                        "text": "UNKNOWN"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Security Zone Destination"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "SANDBOX_DECEPTION": {
+                        "color": "rgba(249, 115, 22, 0.25)",
+                        "index": 0,
+                        "text": "SANDBOX_DECEPTION"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "REAL_INDUSTRIAL": {
+                        "color": "rgba(16, 185, 129, 0.25)",
+                        "index": 1,
+                        "text": "REAL_INDUSTRIAL"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "GATEWAY_REJECT": {
+                        "color": "rgba(100, 116, 139, 0.25)",
+                        "index": 2,
+                        "text": "GATEWAY_REJECT"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "result": true,
+              "table": true
+            },
+            "indexByName": {
+              "_time": 0,
+              "src_ip": 1,
+              "actor_type": 2,
+              "routing_world": 3,
+              "tactic": 4,
+              "event_details": 5
+            },
+            "renameByName": {
+              "_time": "Timestamp",
+              "src_ip": "Source IP",
+              "actor_type": "Actor Classification",
+              "routing_world": "Security Zone Destination",
+              "tactic": "MITRE ATT&CK Tactic",
+              "event_details": "Event / Quarantine Reason"
+            }
+          }
+        }
+      ],
       "targets": [
         {
           "datasource": {
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"src_ip\", \"username\", \"tactic\", \"reason\", \"routing_world\", \"actor_type\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"reason\")\n  |> keep(columns: [\"_time\", \"_value\", \"src_ip\", \"tactic\", \"routing_world\", \"actor_type\"])\n  |> rename(columns: {\"_value\": \"event_details\"})\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
           "refId": "A"
         }
       ]
@@ -309,5 +460,5 @@
   "timezone": "browser",
   "title": "DMZ Access Gateway & Dual-World Telemetry",
   "uid": "dmz-gateway-telemetry",
-  "version": 1
+  "version": 2
 }
