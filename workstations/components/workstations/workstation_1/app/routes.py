@@ -301,16 +301,58 @@ def terminal_exec():
     if os.getenv("IS_DECOY", "false").lower() == "true":
         cmd_clean = cmd.strip()
         cmd_lower = cmd_clean.lower()
+        decoy_role = os.getenv("DECOY_ROLE", "engineer").lower()
+        device_ip = os.getenv("WORKSTATION_DEVICE_IP", "192.168.99.21")
+        hostname = os.getenv("HOSTNAME", "ws-eng-decoy-01")
+        device_mac = os.getenv("WORKSTATION_DEVICE_MAC", "02:42:c0:a8:63:15")
         err = ""
+
         if cmd_lower in ("ls", "ls -l", "ls -la", "dir"):
+            if decoy_role == "operator":
+                out = (
+                    "total 296\n"
+                    "-rw-r--r-- 1 shift_operator scada_ops  48120 Sep 22 14:10 Emergency_Shutdown_Procedure_SOP_Rev4.pdf\n"
+                    "-rw-r--r-- 1 shift_operator scada_ops   3140 Sep 22 16:05 Shift_Handover_Log_CCR_2026.txt\n"
+                    "-rw-r--r-- 1 shift_operator scada_ops  18490 Sep 21 09:30 HMI_Alarm_Bypass_Matrix.xlsx\n"
+                    "-rw-r--r-- 1 shift_operator scada_ops  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
+                    "-rw-r--r-- 1 shift_operator scada_ops    528 Sep 20 18:22 historian_connection.conf\n"
+                    "drwxr-xr-x 2 shift_operator scada_ops   4096 Sep 22 00:00 hmi_trends"
+                )
+            else:
+                out = (
+                    "total 384\n"
+                    "-rw-r--r-- 1 eng_operator scada_eng 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.s7p\n"
+                    "-rw------- 1 eng_operator scada_eng   4096 Sep 19 14:03 SCADA_Admin_Master_Keys.kdbx\n"
+                    "-rw-r--r-- 1 eng_operator scada_eng  84112 Sep 15 11:45 Safety_Interlock_Bypass_Codes.pdf\n"
+                    "-rw-r--r-- 1 eng_operator scada_eng  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
+                    "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
+                    "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups"
+                )
+        elif "shift_handover" in cmd_lower:
             out = (
-                "total 384\n"
-                "-rw-r--r-- 1 eng_operator eng_operator 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.s7p\n"
-                "-rw------- 1 eng_operator eng_operator   4096 Sep 19 14:03 SCADA_Admin_Master_Keys.kdbx\n"
-                "-rw-r--r-- 1 eng_operator eng_operator  84112 Sep 15 11:45 Safety_Interlock_Bypass_Codes.pdf\n"
-                "-rw-r--r-- 1 eng_operator eng_operator  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
-                "-rw-r--r-- 1 eng_operator eng_operator    528 Sep 20 18:22 historian_connection.conf\n"
-                "drwxr-xr-x 2 eng_operator eng_operator   4096 Sep 21 00:00 backups"
+                "================================================================================\n"
+                "CRUDE DISTILLATION UNIT (CDU-01) - CENTRAL CONTROL ROOM SHIFT HANDOVER LOG\n"
+                "Date: 2026-09-22 | Shift: B (16:00 - 00:00) | Lead Operator: J. Martinez\n"
+                "CANARY_ID: CANARY-SHIFT-LOG-CDU-88219\n"
+                "================================================================================\n"
+                "OPERATIONAL SUMMARY: CDU-01 throughput at 98.4%. Column pressure 102.4 PSI.\n"
+                "RESTRICTION: Furnace interlock I-402 in AUTO PID. Lockbox #4 code: 8492.\n"
+                "Historian Ingestion Gateway: 192.168.99.50:8086 (Token: canary_tok_ops_99182a)\n"
+            )
+        elif "emergency_shutdown" in cmd_lower:
+            out = (
+                "[PDF CANARY DOCUMENT: CANARY-SOP-ESD-OVERRIDE-9912]\n"
+                "Title: CDU-01 Standard Operating Procedure - Emergency Shutdown Bypass Protocol\n"
+                "Direct Command: Force coil 0x002A on 192.168.99.10 to value 1.\n"
+                "Master ESD Override Code: 9942\n"
+            )
+        elif "hmi_alarm" in cmd_lower or "alarm_bypass" in cmd_lower:
+            out = (
+                "[SPREADSHEET CANARY: CANARY-XLS-ALARM-7721]\n"
+                "TAG_ID,ALARM_PRIORITY,SUPPRESSION_KEY,OPERATOR_OVERRIDE_PIN\n"
+                "PT-101_HIGH_PRESS,CRITICAL,SUPPRESS_AUTH_9921,8831\n"
+                "TT-204_TEMP_RUNAWAY,HIGH,SUPPRESS_AUTH_9922,4412\n"
+                "FT-301_FEED_LOSS,CRITICAL,SUPPRESS_AUTH_9923,9910\n"
             )
         elif "scada_admin_master_keys.kdbx" in cmd_lower:
             out = (
@@ -354,18 +396,21 @@ def terminal_exec():
                 "TOKEN=supersecrettoken_canary_ht88921\n"
             )
         elif cmd_lower in ("whoami",):
-            out = "eng_operator"
+            out = "shift_operator" if decoy_role == "operator" else "eng_operator"
         elif cmd_lower in ("id",):
-            out = "uid=1001(eng_operator) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)"
+            if decoy_role == "operator":
+                out = "uid=1002(shift_operator) gid=1002(scada_ops) groups=1002(scada_ops)"
+            else:
+                out = "uid=1001(eng_operator) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)"
         elif cmd_lower in ("pwd",):
-            out = "/home/eng_operator/scada_workspace"
+            out = "/home/shift_operator/hmi_console" if decoy_role == "operator" else "/home/eng_operator/scada_workspace"
         elif cmd_lower in ("uname -a", "uname"):
-            out = "Linux ws-eng-decoy-01 5.15.0-89-generic #99-Ubuntu SMP x86_64 GNU/Linux"
+            out = f"Linux {hostname} 5.15.0-89-generic #99-Ubuntu SMP x86_64 GNU/Linux"
         elif cmd_lower in ("ifconfig", "ip a", "ip addr"):
             out = (
                 "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n"
-                "        inet 192.168.99.21  netmask 255.255.255.0  broadcast 192.168.99.255\n"
-                "        ether 02:42:c0:a8:63:15  txqueuelen 0  (Ethernet)\n"
+                f"        inet {device_ip}  netmask 255.255.255.0  broadcast 192.168.99.255\n"
+                f"        ether {device_mac}  txqueuelen 0  (Ethernet)\n"
             )
         elif "cat /etc/passwd" in cmd_lower:
             out = (
@@ -373,7 +418,8 @@ def terminal_exec():
                 "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
                 "scada_admin:x:1000:1000:SCADA Administrator:/home/scada_admin:/bin/bash\n"
                 "eng_operator:x:1001:1001:Field Engineering Operator:/home/eng_operator:/bin/bash\n"
-                "historian_svc:x:1002:1002:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
+                "shift_operator:x:1002:1002:Central Control Room Shift Operator:/home/shift_operator:/bin/bash\n"
+                "historian_svc:x:1003:1003:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
             )
         elif "mbtget" in cmd_lower or "modbus" in cmd_lower:
             out = "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12"

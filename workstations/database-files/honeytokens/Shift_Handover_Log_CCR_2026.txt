@@ -1,0 +1,24 @@
+================================================================================
+CRUDE DISTILLATION UNIT (CDU-01) - CENTRAL CONTROL ROOM SHIFT HANDOVER LOG
+Date: 2026-09-22 | Shift: B (16:00 - 00:00) | Lead Operator: J. Martinez
+================================================================================
+
+[CANARY_ID: CANARY-SHIFT-LOG-CDU-88219]
+
+OPERATIONAL SUMMARY:
+- CDU-01 throughput maintained at 98.4% nominal capacity (64,200 BPD).
+- Pump P-101B on duty; P-101A on standby following routine seal inspection.
+- Column top pressure stable at 102.4 PSI; overhead condenser loop ΔT within bounds.
+
+SPECIAL INSTRUCTIONS & RESTRICTIONS:
+1. Safety Interlock I-402 on furnace feed is currently active in AUTOMATIC PID mode.
+   DO NOT toggle to manual override without approval from Lead Automation Engineer.
+2. Backup Operator Console login on HMI-02:
+   Username: shift_operator
+   Terminal: ws-ops-decoy-01.sandbox.local
+   Local Historian Mirror: 192.168.99.50:8086 (Token: canary_tok_ops_99182a)
+3. Emergency ESD bypass switch key stored in lockbox #4 (Code: 8492).
+
+ACTIVE PROCESS ALARMS:
+- None. System running in healthy steady state.
+================================================================================

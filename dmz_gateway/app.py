@@ -56,10 +56,14 @@ def login():
 
     if is_anomalous:
         # ── ATTACKER DETECTED: ACTIVE DECEPTION QUARANTINE ──────────────────────
+        # Determine persona: operator or engineer based on targeted account/action
+        target_role = "operator" if any(k in username.lower() for k in ("op", "shift", "hmi", "scada", "user")) else "engineer"
+        dest_node = "ws_decoy_ops" if target_role == "operator" else "ws_decoy_eng"
+
         # Fake successful authentication and seamlessly divert session into the Honeypot Sandbox!
         session['is_authenticated'] = True
-        session['user'] = username or "operator_guest"
-        session['role'] = "operator"
+        session['user'] = username or ("shift_operator" if target_role == "operator" else "eng_operator")
+        session['role'] = target_role
         session['routing_world'] = 'SANDBOX_DECEPTION'
         session['actor_type'] = 'attacker'
         session['quarantine_reason'] = reason
@@ -68,14 +72,15 @@ def login():
 
         telemetry_logger.log_event_to_story(
             event_type="attacker_quarantined_to_sandbox",
-            message=f"Threat diverted to Deception Honeypot Sandbox: {reason}",
+            message=f"Threat diverted to Deception Honeypot Sandbox ({dest_node}): {reason}",
             severity="warning",
             details={
                 "ip": ip,
                 "user_agent": user_agent,
                 "username": username,
                 "tactic": tactic,
-                "destination": "ws_decoy_eng"
+                "destination": dest_node,
+                "role": target_role
             }
         )
 
@@ -86,7 +91,7 @@ def login():
             routing_world="SANDBOX_DECEPTION",
             actor_type="attacker",
             tactic=tactic,
-            reason=reason
+            reason=f"{reason} (Diverted to {dest_node})"
         )
 
         return redirect('/dashboard')
@@ -211,9 +216,15 @@ def proxy_root(subpath='dashboard'):
     ip = get_client_ip()
 
     if routing_world == 'REAL_INDUSTRIAL':
-        target_url = config.REAL_WORKSTATION_URL
+        if session.get('role') == 'operator':
+            target_url = config.REAL_OPS_WORKSTATION_URL
+        else:
+            target_url = config.REAL_WORKSTATION_URL
     else:
-        target_url = config.DECOY_WORKSTATION_URL
+        if session.get('role') == 'operator':
+            target_url = config.DECOY_OPS_WORKSTATION_URL
+        else:
+            target_url = config.DECOY_WORKSTATION_URL
         # Telemetry capture of attacker action in the sandbox
         telemetry_logger.log_routing_telemetry(
             src_ip=ip,
@@ -238,20 +249,19 @@ def proxy_root(subpath='dashboard'):
 
 @app.route('/status')
 def gateway_status():
-    """Security Operations & Telemetry Status endpoint."""
-    quarantined = []
-    now = time.time()
-    for ip, data in list(anomaly_detector._quarantined_ips.items()):
-        elapsed = now - data['timestamp']
-        if elapsed < 600:
-            quarantined.append({
-                "ip": ip,
-                "reason": data['reason'],
-                "tactic": data['tactic'],
-                "expires_in": int(600 - elapsed)
-            })
+    """Security Operations & Telemetry: redirect to centralized Grafana dashboard."""
+    return redirect(config.GRAFANA_URL)
 
-    return render_template('gateway_status.html', stats=_stats, quarantined_list=quarantined)
+@app.route('/api/status')
+def gateway_status_api():
+    """Security Operations & Telemetry Status endpoint (REST API)."""
+    return jsonify({
+        "status": "ONLINE",
+        "gateway_id": "DMZ-GW-01A",
+        "zone": "PURDUE_LEVEL_3.5_DMZ",
+        "stats": _stats,
+        "grafana_dashboard": config.GRAFANA_URL
+    })
 
 @app.route('/logout')
 def logout():
