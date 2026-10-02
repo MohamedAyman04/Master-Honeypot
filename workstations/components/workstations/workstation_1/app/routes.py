@@ -1,6 +1,7 @@
 import os
 import time
 import math
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
 from .models import User
 from .app import log_login_attempt_detailed, log_successful_login, log_failed_login, log_activity
@@ -295,6 +296,18 @@ def terminal_exec():
                     "level": "Level 2"
                 }
             }) + "\n")
+
+        # Push to Monitor Net Historian via Proxy Gateway
+        proxy_gw = os.getenv("PROXY_GATEWAY_URL", os.getenv("LEVEL2_HISTORIAN_URL", "http://historian_api:5000"))
+        try:
+            requests.post(f"{proxy_gw}/api/external-event", json={
+                "event_type": "WORKSTATION_COMMAND",
+                "source": os.getenv("HOSTNAME", "ws_decoy_main"),
+                "detail": f"User {username} executed {cmd[:80]} | MITRE={mitre_id}",
+                "severity": severity
+            }, timeout=1.5)
+        except Exception:
+            pass
     except Exception:
         pass
 

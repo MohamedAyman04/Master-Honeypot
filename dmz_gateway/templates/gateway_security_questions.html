@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARABCO — Verification</title>
+    <title>ARABCO — Security Verification</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -46,7 +46,7 @@
 
         .gateway-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
         }
 
         .portal-card {
@@ -58,7 +58,7 @@
         }
 
         .portal-header {
-            padding: 36px 32px 20px;
+            padding: 32px 32px 18px;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -106,16 +106,7 @@
             color: var(--text-muted);
             text-align: center;
             line-height: 1.5;
-            margin-bottom: 22px;
-        }
-
-        .info-email {
-            color: #34d399;
-            font-weight: 600;
-            font-family: var(--font-mono);
-            display: block;
-            margin-top: 4px;
-            font-size: 0.85rem;
+            margin-bottom: 20px;
         }
 
         .alert-error {
@@ -131,25 +122,30 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
-        .otp-input {
+        .form-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
             width: 100%;
             background-color: #080d0a;
             border: 1px solid var(--border-subtle);
             border-radius: 8px;
-            padding: 14px;
-            font-family: var(--font-mono);
-            font-size: 1.4rem;
-            font-weight: 600;
+            padding: 11px 14px;
+            font-family: var(--font-main);
+            font-size: 0.92rem;
             color: var(--text-heading);
-            text-align: center;
-            letter-spacing: 0.35em;
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .otp-input:focus {
+        .form-input:focus {
             outline: none;
             border-color: var(--accent-brand);
             box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
@@ -169,6 +165,7 @@
             letter-spacing: 0.02em;
             cursor: pointer;
             transition: all 0.15s ease;
+            margin-top: 8px;
             box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
         }
 
@@ -182,24 +179,22 @@
             transform: translateY(0);
         }
 
-        .fallback-box {
-            margin-top: 22px;
-            padding-top: 18px;
-            border-top: 1px solid var(--border-subtle);
-            text-align: center;
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 18px;
+            font-size: 0.8rem;
         }
 
-        .btn-fallback {
-            display: inline-block;
-            color: #34d399;
-            font-size: 0.82rem;
+        .nav-links a {
+            color: var(--text-muted);
             text-decoration: none;
             transition: color 0.15s ease;
         }
 
-        .btn-fallback:hover {
-            color: #6ee7b7;
-            text-decoration: underline;
+        .nav-links a:hover {
+            color: #34d399;
         }
     </style>
 </head>
@@ -217,8 +212,7 @@
 
             <div class="portal-body">
                 <div class="info-prompt">
-                    Enter the 6-digit passcode sent to
-                    <span class="info-email">{{ session.get('temp_email', 'mohikel6@gmail.com') }}</span>
+                    Security Verification Questions
                 </div>
 
                 {% if error %}
@@ -227,9 +221,20 @@
                 </div>
                 {% endif %}
 
-                <form method="POST" action="/mfa" autocomplete="off">
+                <form method="POST" action="/mfa/security-questions" autocomplete="off">
                     <div class="form-group">
-                        <input type="text" id="otp_code" name="otp_code" class="otp-input" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code" autofocus placeholder="••••••">
+                        <label for="dog_name" class="form-label">What is my dog's name?</label>
+                        <input type="text" id="dog_name" name="dog_name" class="form-input" placeholder="Your answer" required autofocus>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birth_place" class="form-label">Where was I born?</label>
+                        <input type="text" id="birth_place" name="birth_place" class="form-input" placeholder="Your answer" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="siblings_count" class="form-label">How many siblings do I have?</label>
+                        <input type="text" id="siblings_count" name="siblings_count" class="form-input" placeholder="Your answer" required>
                     </div>
 
                     <button type="submit" class="btn-authenticate">
@@ -237,10 +242,8 @@
                     </button>
                 </form>
 
-                <div class="fallback-box">
-                    <a href="/mfa/security-questions" class="btn-fallback">
-                        Verify with Security Questions &rarr;
-                    </a>
+                <div class="nav-links">
+                    <a href="/mfa">&larr; Back to Email Code</a>
                 </div>
             </div>
         </div>

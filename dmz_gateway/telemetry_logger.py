@@ -42,8 +42,8 @@ def log_event_to_story(event_type, message, severity="info", details=None):
     dt = details or {}
     src_ip = dt.get("ip", "0.0.0.0")
     payload = {
-        "sensor": "dmz_gateway",
-        "level": "Level 3.5",
+        "sensor": "portal",
+        "level": "Level 3",
         "event_type": event_type,
         "src_ip": src_ip,
         "stage": "S1",
