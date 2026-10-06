@@ -22,13 +22,38 @@ def _has_role(allowed_roles):
 def _device_profile():
     profile = current_app.config.get('WORKSTATION_DEVICE_PROFILE', {})
     component = current_app.config.get('WORKSTATION_COMPONENT', 'workstation_1')
+
+    # Authentic industrial node name mapping (never disclose 'decoy' or 'sandbox' to the UI)
+    name_map = {
+        'workstation_1': 'WS-ENG-01',
+        'workstation_2': 'WS-ENG-02',
+        'workstation_3': 'WS-OPS-01',
+        'workstation_4': 'WS-OPS-02',
+        'workstation_decoy': 'WS-ENG-02',
+        'workstation_decoy_eng': 'WS-ENG-02',
+        'workstation_decoy_eng_02': 'WS-ENG-03',
+        'workstation_decoy_ops': 'WS-OPS-02',
+        'workstation_decoy_ops_02': 'WS-OPS-03',
+        'workstation_decoy_main': 'WS-CCR-MAIN',
+    }
+    display_component = name_map.get(
+        component,
+        component.replace('decoy_', '').replace('_decoy', '').replace('_', '-').upper()
+    )
+
+    serial = profile.get('serial') or 'FAC-ENG-2401'
+    serial = serial.replace('-DECOY', '').replace('_DECOY', '').replace('DECOY-', '')
+
+    model = profile.get('model') or 'Siemens IPC477E Industrial PC'
+    model = model.replace(' Decoy', '').replace(' decoy', '').replace('Decoy ', '')
+
     return {
-        'component': component,
-        'ip': profile.get('ip') or 'N/A',
-        'mac': profile.get('mac') or 'N/A',
-        'serial': profile.get('serial') or 'N/A',
-        'model': profile.get('model') or 'N/A',
-        'vendor': profile.get('vendor') or 'N/A',
+        'component': display_component,
+        'ip': profile.get('ip') or os.getenv('WORKSTATION_DEVICE_IP', '192.168.50.21'),
+        'mac': profile.get('mac') or os.getenv('WORKSTATION_DEVICE_MAC', '02:42:c0:a8:32:15'),
+        'serial': serial,
+        'model': model,
+        'vendor': profile.get('vendor') or 'Siemens Industrial',
     }
 
 
@@ -315,12 +340,17 @@ def terminal_exec():
         cmd_clean = cmd.strip()
         cmd_lower = cmd_clean.lower()
         decoy_role = os.getenv("DECOY_ROLE", "engineer").lower()
-        device_ip = os.getenv("WORKSTATION_DEVICE_IP", "192.168.99.21")
-        hostname = os.getenv("HOSTNAME", "ws-eng-decoy-01")
+        raw_host = os.getenv("HOSTNAME", "ws-eng-02")
+        hostname = "ws-eng-02" if "decoy" in raw_host.lower() else raw_host
         device_mac = os.getenv("WORKSTATION_DEVICE_MAC", "02:42:c0:a8:63:15")
         err = ""
 
-        if cmd_lower in ("ls", "ls -l", "ls -la", "dir"):
+        if cmd_clean == "ls":
+            if decoy_role == "operator":
+                out = "Emergency_Shutdown_Procedure_SOP_Rev4.pdf  HMI_Alarm_Bypass_Matrix.xlsx  Shift_Handover_Log_CCR_2026.txt  historian_connection.conf  hmi_trends  plant_topology_map.vsdx\n"
+            else:
+                out = "Refinery_PLC_Logic_Backup_2026.s7p  SCADA_Admin_Master_Keys.kdbx  Safety_Interlock_Bypass_Codes.pdf  backups  historian_connection.conf  plant_topology_map.vsdx\n"
+        elif cmd_lower in ("ls -l", "ls -la", "dir"):
             if decoy_role == "operator":
                 out = (
                     "total 296\n"
@@ -329,7 +359,7 @@ def terminal_exec():
                     "-rw-r--r-- 1 shift_operator scada_ops  18490 Sep 21 09:30 HMI_Alarm_Bypass_Matrix.xlsx\n"
                     "-rw-r--r-- 1 shift_operator scada_ops  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
                     "-rw-r--r-- 1 shift_operator scada_ops    528 Sep 20 18:22 historian_connection.conf\n"
-                    "drwxr-xr-x 2 shift_operator scada_ops   4096 Sep 22 00:00 hmi_trends"
+                    "drwxr-xr-x 2 shift_operator scada_ops   4096 Sep 22 00:00 hmi_trends\n"
                 )
             else:
                 out = (
@@ -339,7 +369,7 @@ def terminal_exec():
                     "-rw-r--r-- 1 eng_operator scada_eng  84112 Sep 15 11:45 Safety_Interlock_Bypass_Codes.pdf\n"
                     "-rw-r--r-- 1 eng_operator scada_eng  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
                     "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
-                    "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups"
+                    "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups\n"
                 )
         elif "shift_handover" in cmd_lower:
             out = (
@@ -409,16 +439,13 @@ def terminal_exec():
                 "TOKEN=supersecrettoken_canary_ht88921\n"
             )
         elif cmd_lower in ("whoami",):
-            out = "shift_operator" if decoy_role == "operator" else "eng_operator"
+            out = f"{username}\n"
         elif cmd_lower in ("id",):
-            if decoy_role == "operator":
-                out = "uid=1002(shift_operator) gid=1002(scada_ops) groups=1002(scada_ops)"
-            else:
-                out = "uid=1001(eng_operator) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)"
+            out = f"uid=1001({username}) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)\n"
         elif cmd_lower in ("pwd",):
-            out = "/home/shift_operator/hmi_console" if decoy_role == "operator" else "/home/eng_operator/scada_workspace"
+            out = f"/home/{username}/scada_workspace\n"
         elif cmd_lower in ("uname -a", "uname"):
-            out = f"Linux {hostname} 5.15.0-89-generic #99-Ubuntu SMP x86_64 GNU/Linux"
+            out = f"Linux {hostname} 5.15.0-89-generic #99-Ubuntu SMP x86_64 GNU/Linux\n"
         elif cmd_lower in ("ifconfig", "ip a", "ip addr"):
             out = (
                 "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n"
@@ -429,13 +456,12 @@ def terminal_exec():
             out = (
                 "root:x:0:0:root:/root:/bin/bash\n"
                 "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
-                "scada_admin:x:1000:1000:SCADA Administrator:/home/scada_admin:/bin/bash\n"
-                "eng_operator:x:1001:1001:Field Engineering Operator:/home/eng_operator:/bin/bash\n"
+                f"{username}:x:1001:1001:SCADA Engineer:/home/{username}:/bin/bash\n"
                 "shift_operator:x:1002:1002:Central Control Room Shift Operator:/home/shift_operator:/bin/bash\n"
                 "historian_svc:x:1003:1003:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
             )
         elif "mbtget" in cmd_lower or "modbus" in cmd_lower:
-            out = "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12"
+            out = "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12\n"
         elif "nmap" in cmd_lower or "ping" in cmd_lower:
             out = (
                 "Starting Nmap 7.80 ( https://nmap.org )\n"
@@ -446,34 +472,169 @@ def terminal_exec():
                 "502/tcp open  mbap (Modbus TCP)\n"
             )
         else:
-            out = f"Command executed: {cmd_clean}"
+            out = f"Command executed: {cmd_clean}\n"
 
         return jsonify({'output': out, 'error': err})
 
+
+    cmd_clean = cmd.strip()
+    cmd_lower = cmd_clean.lower()
+    
+    # Industrial SCADA command simulations
+    if "mbtget" in cmd_lower or "modbus" in cmd_lower:
+        out = (
+            "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12\n"
+            "Modbus Response: ExceptionCode=0 (SUCCESS), TransID=4921, UnitID=1"
+        )
+        return jsonify({'output': out, 'error': ''})
+    elif "snap7" in cmd_lower or ("s7" in cmd_lower and "102" in cmd_lower):
+        out = (
+            "Connected to Siemens S7-1500 PLC at 192.168.99.10:102 (Rack 0, Slot 1)\n"
+            "CPU State: RUN | Firmware: V2.8.3 | DB1 Size: 1024 bytes"
+        )
+        return jsonify({'output': out, 'error': ''})
+    elif "nmap" in cmd_lower or "ping" in cmd_lower:
+        out = (
+            "Starting Nmap 7.80 ( https://nmap.org )\n"
+            "Nmap scan report for plc-safety-01 (192.168.99.10)\n"
+            "Host is up (0.00041s latency).\n"
+            "PORT     STATE SERVICE\n"
+            "102/tcp  open  iso-tsap (Siemens S7)\n"
+            "502/tcp  open  mbap (Modbus TCP)\n"
+            "4840/tcp open  opcua (OPC Unified Architecture)\n"
+        )
+        return jsonify({'output': out, 'error': ''})
+    elif cmd_lower in ("whoami",):
+        return jsonify({'output': f"{username}\n", 'error': ''})
+    elif cmd_lower in ("id",):
+        return jsonify({'output': f"uid=1001({username}) gid=1001(scada_{role}) groups=1001(scada_{role}),27(sudo)\n", 'error': ''})
+    elif cmd_lower in ("help", "man"):
+        out = (
+            "ARABCO Industrial Workstation Shell (v3.4-ot)\n"
+            "Standard commands: ls, whoami, id, pwd, uname, ip, ifconfig, cat, ps, uptime, date, clear\n"
+            "SCADA diagnostics: mbtget, snap7, nmap, ping\n"
+        )
+        return jsonify({'output': out, 'error': ''})
+
+
+    # Native container execution for standard commands
+    import subprocess
     try:
-        import paramiko
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        # Use SCADA_SSH environment variables, defaulting to engineer
-        scada_host = current_app.config.get('SCADA_SSH_HOST', '172.28.0.10')
-        scada_port = int(current_app.config.get('SCADA_SSH_PORT', '2222'))
-        # Determine SCADA user based on role or defaults
-        scada_user = 'operator' if role == 'operator' else 'engineer'
-        scada_pass = 'operator123' if role == 'operator' else 'engineer456'
-        
-        # Hardcode SCADA SSH fallback credentials for convenience 
-        # (Level 2 scada_ssh container credentials)
-        if scada_host == '172.28.0.10':
-            pass # Keep defaults
-
-        ssh.connect(hostname=scada_host, port=scada_port, username=scada_user, password=scada_pass, timeout=5)
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        out = stdout.read().decode('utf-8')
-        err = stderr.read().decode('utf-8')
-        ssh.close()
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=2.0
+        )
+        out = proc.stdout
+        err = proc.stderr
+        if not out and not err:
+            out = f"[Command executed successfully, returncode={proc.returncode}]"
         return jsonify({'output': out, 'error': err})
-    except Exception as e:
-        return jsonify({'error': f"SSH connection failed: {str(e)}"})
+    except subprocess.TimeoutExpired:
+        return jsonify({'output': '', 'error': f"Command execution timed out (>2s): {cmd[:40]}"})
+    except Exception as exc:
+        return jsonify({'output': '', 'error': f"Execution error: {str(exc)}"})
+
+
+@auth_bp.route('/api/historian/query', methods=['GET', 'POST'])
+def historian_query():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'unauthorized'}), 401
+
+    if request.method == 'POST':
+        data = request.get_json(force=True, silent=True) or request.form.to_dict()
+        user_input = data.get('query', '').strip()
+    else:
+        user_input = request.args.get('query', '').strip()
+
+    if not user_input:
+        user_input = "SELECT id, tag_id, sensor_name, value, unit, status, location, timestamp FROM sensor_readings ORDER BY id ASC LIMIT 25"
+
+    username = session.get('user', 'ANON')
+    role = _user_role()
+
+    import re, sqlite3, time
+    from pathlib import Path
+
+    # Detect SQL injection attack patterns
+    sqli_patterns = [
+        r"(\bUNION\b\s+SELECT\b)",
+        r"(\bSELECT\b.*\bFROM\b.*\bWHERE\b.*(\bOR\b|\bAND\b).*(['\"].*['\"]|\d+=\d+))",
+        r"(\bOR\b\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+)",
+        r"(--|/\*|\*/|;\s*$)",
+        r"(\bDROP\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b)",
+        r"(\bsqlite_master\b|\bsystem_secrets\b)"
+    ]
+    is_sqli = any(re.search(pat, user_input, re.IGNORECASE) for pat in sqli_patterns)
+
+    if is_sqli:
+        log_activity('SECURITY_ALERT', f"SQL_INJECTION_DETECTED || USER={username} || INPUT={user_input}")
+        try:
+            from components.common.story_client import StoryClient
+            StoryClient(component="workstation_historian", level="Level 3").log(
+                event_type="sql_injection",
+                message=f"SQL Injection attempt in Historian Query Console: {user_input[:100]}",
+                severity="critical",
+                details={
+                    "user": username,
+                    "role": role,
+                    "payload": user_input,
+                    "mitre_id": "T0855",
+                    "tactic": "Execution / Collection",
+                    "ip": request.headers.get('X-Forwarded-For', request.remote_addr)
+                }
+            )
+        except Exception:
+            pass
+
+    # Resolve database path
+    component_name = (os.getenv('WORKSTATION_COMPONENT', 'workstation_1') or 'workstation_1').strip()
+    raw_db_name = (os.getenv('WORKSTATION_DB_NAME', f'{component_name}.db') or f'{component_name}.db').strip()
+    db_file_name = Path(raw_db_name).name
+    if not db_file_name.endswith('.db'):
+        db_file_name = f'{db_file_name}.db'
+    repo_root = Path(__file__).resolve().parents[4]
+    db_path = repo_root / 'database-files' / 'workstations' / db_file_name
+
+    start_time = time.time()
+    try:
+        conn = sqlite3.connect(str(db_path), timeout=5)
+        cursor = conn.cursor()
+
+        # If user input looks like a full SELECT query or contains UNION, run directly (vulnerable)
+        if user_input.strip().upper().startswith('SELECT') or 'UNION' in user_input.upper():
+            sql = user_input
+        else:
+            # Vulnerable string interpolation allowing SQL injection:
+            sql = f"SELECT id, tag_id, sensor_name, value, unit, status, location, timestamp FROM sensor_readings WHERE sensor_name LIKE '%{user_input}%' OR tag_id LIKE '%{user_input}%' ORDER BY id ASC LIMIT 50"
+
+        cursor.execute(sql)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        rows = cursor.fetchall()
+        elapsed_ms = round((time.time() - start_time) * 1000, 2)
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'query': sql,
+            'columns': columns,
+            'rows': rows,
+            'count': len(rows),
+            'elapsed_ms': elapsed_ms,
+            'is_sqli': is_sqli
+        })
+    except Exception as exc:
+        elapsed_ms = round((time.time() - start_time) * 1000, 2)
+        return jsonify({
+            'success': False,
+            'query': user_input,
+            'error': str(exc),
+            'elapsed_ms': elapsed_ms,
+            'is_sqli': is_sqli
+        }), 400
+
 
 
 
@@ -502,12 +663,18 @@ def l2_status():
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_STATUS || TARGET=L2_PHYSICS_API")
 
     if os.getenv("IS_DECOY", "false").lower() == "true":
-        # Sandboxed Honeypot Zone: Live dynamic physics status
+        # Sandboxed Honeypot Zone: Live dynamic physics status (masked for high fidelity)
         data = l2_bridge.get_physics_status()
-        data["zone"] = "SANDBOX_HONEYPOT_DECEPTION"
+        data["zone"] = "REFINERY_CDU_01_PRODUCTION"
+        data["system"] = "PRODUCTION_CDU_01"
         return jsonify(data)
 
-    # Real Industrial Zone: Clean, steady-state healthy production baseline
+    # Real Industrial Zone: Query live physics status from Level 2 SCADA engine
+    data = l2_bridge.get_physics_status()
+    if data and data.get("status") != "DISCONNECTED":
+        data["zone"] = "REAL_INDUSTRIAL_PRODUCTION"
+        return jsonify(data)
+
     return jsonify({
         "system": "PRODUCTION_CRUDE_DISTILLATION_UNIT_01",
         "status": "RUNNING",
@@ -517,6 +684,7 @@ def l2_status():
         "alerts": [],
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     })
+
 
 
 @auth_bp.route('/api/l2/metrics', methods=['GET'])
@@ -530,27 +698,34 @@ def l2_metrics():
     log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_METRICS || TARGET=L2_PHYSICS_API")
 
     if os.getenv("IS_DECOY", "false").lower() == "true":
-        # Sandboxed Honeypot Zone: Dynamic physics engine reacting to attacks
+        # Sandboxed Honeypot Zone: Dynamic physics engine reacting to attacks (masked for high fidelity)
         data = l2_bridge.get_physics_metrics()
-        data["zone"] = "SANDBOX_HONEYPOT_DECEPTION"
+        data["zone"] = "REFINERY_CDU_01_PRODUCTION"
+        data["system"] = "PRODUCTION_CDU_01"
+        data["status"] = "ACTIVE_REGULATION"
         return jsonify(data)
 
-    # Real Industrial Zone: Pristine steady-state telemetry (nominal with slight realistic drift)
-    import math
-    t = time.time()
-    drift = math.sin(t / 15.0) * 0.3
+    # Real Industrial Zone: Pull live telemetry directly from the Level 2 SCADA physics engine!
+    data = l2_bridge.get_physics_metrics()
+    if data and data.get("pressure") is not None:
+        data["zone"] = "REAL_INDUSTRIAL_PRODUCTION"
+        data["system"] = "PRODUCTION_CDU_01"
+        data["status"] = "HEALTHY_STEADY_STATE"
+        return jsonify(data)
+
     return jsonify({
         "system": "PRODUCTION_CDU_01",
-        "pressure": round(102.4 + drift, 2),
-        "temperature": round(68.5 + drift * 0.2, 2),
-        "flow_rate": round(45.2 + drift * 0.4, 2),
-        "pump_rpm": 1750,
-        "valve_pos": 0.85,
-        "viscosity": 2.35,
+        "pressure": 132.11,
+        "temperature": 24.98,
+        "flow_rate": 12.02,
+        "pump_rpm": 1200,
+        "valve_pos": 0.50,
+        "viscosity": 1.00,
         "status": "HEALTHY_STEADY_STATE",
         "zone": "REAL_INDUSTRIAL_PRODUCTION",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     })
+
 
 
 @auth_bp.route('/api/l2/alerts', methods=['GET'])
@@ -569,7 +744,7 @@ def l2_alerts():
     if os.getenv("IS_DECOY", "false").lower() == "true":
         # Sandboxed Honeypot: Show active security alerts captured in the honeypot
         alerts = l2_bridge.get_l2_alerts(lookback=lookback, limit=limit)
-        return jsonify({'count': len(alerts), 'alerts': alerts, 'zone': 'SANDBOX_HONEYPOT'})
+        return jsonify({'count': len(alerts), 'alerts': alerts, 'zone': 'REFINERY_CDU_01_PRODUCTION'})
 
     # Real Industrial Area: Clean, 0 alerts
     return jsonify({'count': 0, 'alerts': [], 'zone': 'REAL_INDUSTRIAL_PRODUCTION'})
@@ -586,7 +761,7 @@ def l2_summary():
 
     if os.getenv("IS_DECOY", "false").lower() == "true":
         data = l2_bridge.get_l2_summary()
-        data["zone"] = "SANDBOX_HONEYPOT_DECEPTION"
+        data["zone"] = "REFINERY_CDU_01_PRODUCTION"
         return jsonify(data)
 
     return jsonify({
@@ -646,7 +821,7 @@ def l2_control():
             "status": "ok",
             "message": "Actuator command applied to physical process model",
             "result": result,
-            "zone": "SANDBOX_HONEYPOT_DECEPTION"
+            "zone": "REFINERY_CDU_01_PRODUCTION"
         })
 
     # Real Industrial Area: Standard plant DCS operation
@@ -677,15 +852,15 @@ def honeypot_rpi_telemetry():
     return jsonify({
         "device": "Raspberry Pi 4 Model B Rev 1.5",
         "soc": "Broadcom BCM2711 (Quad Core Cortex-A72 @ 1.8GHz)",
-        "zone": "SANDBOX_HONEYPOT_DECEPTION",
-        "architecture_role": "HIL_SOFTPLC_ATTACK_TARGET",
+        "zone": "REFINERY_CDU_01_PRODUCTION",
+        "architecture_role": "REMOTE_IO_CODESYS_SOFTPLC",
         "diagnostics": {
             "soc_temperature_c": soc_temp,
             "thermal_headroom_c": round(85.0 - soc_temp, 2),
             "cpu_load_pct": round(cpu_load * 100, 1),
             "cpu_frequency_ghz": cpu_freq,
             "mem_rss_mb": mem_rss,
-            "codesys_softplc_status": "RUNNING_UNDER_ATTACK_OBSERVATION"
+            "codesys_softplc_status": "ONLINE_NORMAL"
         },
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     })

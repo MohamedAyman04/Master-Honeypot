@@ -1,392 +1,919 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Workstation Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARABCO — Workstation Control Center</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #eff3f8;
-            --surface: #ffffff;
-            --surface-soft: #f6f9fc;
-            --text: #16202b;
-            --muted: #607386;
-            --border: #d7e1eb;
-            --brand: #0f7b6c;
-            --brand-strong: #0d685c;
-            --navy: #15304d;
-            --danger: #cf4141;
-            --success: #1b8f66;
-            --shadow: 0 18px 48px rgba(24, 38, 54, 0.12);
-            --radius-lg: 18px;
-            --radius-md: 12px;
+            --bg-base: #060a08;
+            --surface: #0c130f;
+            --surface-elevated: #111a15;
+            --surface-accent: #17241d;
+            --border-subtle: #18281f;
+            --border-active: #274535;
+            --text-heading: #f0fdf4;
+            --text-body: #d1fae5;
+            --text-muted: #6b8f7d;
+            --accent-brand: #059669;
+            --accent-brand-hover: #10b981;
+            --status-success: #10b981;
+            --status-danger: #ef4444;
+            --font-main: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
-            margin: 0;
-            font-family: 'Manrope', sans-serif;
-            color: var(--text);
+            font-family: var(--font-main);
+            background-color: var(--bg-base);
+            color: var(--text-body);
             min-height: 100vh;
-            background:
-                radial-gradient(circle at 9% 10%, rgba(15, 123, 108, 0.13), transparent 36%),
-                radial-gradient(circle at 93% 84%, rgba(21, 48, 77, 0.14), transparent 43%),
-                linear-gradient(165deg, #f5f9fd 0%, #e9eff6 100%);
-            padding: 30px;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
         }
 
         .shell {
-            width: min(1120px, 100%);
+            max-width: 1200px;
             margin: 0 auto;
-            display: grid;
+            display: flex;
+            flex-direction: column;
             gap: 20px;
         }
 
-        .hero {
-            background: linear-gradient(140deg, #0f2237 0%, #11365a 60%, #0f7b6c 100%);
-            color: #f2fbff;
-            border-radius: 22px;
-            padding: 28px;
-            box-shadow: var(--shadow);
-        }
-
-        .hero h1 {
-            margin: 0;
-            font-size: clamp(1.6rem, 2.5vw, 2.2rem);
-            letter-spacing: -0.02em;
-        }
-
-        .meta {
+        /* ── Top Header / Navbar ───────────────────────────── */
+        .header {
+            background-color: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 16px 24px;
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #ecfdf5;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+        }
+
+        .brand-logo svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .brand-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--text-heading);
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .brand-desc {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--accent-brand-hover);
+            letter-spacing: 0.04em;
+        }
+
+        .header-meta {
+            display: flex;
+            align-items: center;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 12px;
         }
 
         .chip {
-            background: rgba(255, 255, 255, 0.16);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            padding: 7px 12px;
-            border-radius: 999px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            letter-spacing: 0.03em;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 20px;
+        .chip-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
         }
 
-        .panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 22px;
-            box-shadow: var(--shadow);
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--status-success);
+            box-shadow: 0 0 8px var(--status-success);
         }
 
-        .panel h2 {
-            margin: 0 0 14px;
-            font-size: 1.1rem;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .btn {
-            border: 1px solid transparent;
-            border-radius: var(--radius-md);
-            padding: 10px 12px;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
-        }
-
-        .btn:hover { transform: translateY(-1px); }
-
-        .btn-primary {
-            background: linear-gradient(120deg, var(--brand) 0%, var(--brand-strong) 100%);
-            color: #fff;
-            box-shadow: 0 10px 22px rgba(13, 104, 92, 0.25);
-        }
-
-        .btn-ghost {
-            background: var(--surface-soft);
-            border-color: var(--border);
-            color: #294055;
-        }
-
-        .btn-link {
+        .btn-signout {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-main);
+            font-size: 0.8rem;
+            font-weight: 600;
             text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .btn-signout:hover {
+            border-color: var(--status-danger);
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* ── Modern Navigation Tabs ────────────────────────── */
+        .tab-bar {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-main);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
             display: inline-flex;
-            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-heading);
+            background: var(--surface-elevated);
+        }
+
+        .tab-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        }
+
+        /* ── Views / Content Panels ────────────────────────── */
+        .tab-view {
+            display: none;
+            animation: fadeIn 0.15s ease-in-out;
+        }
+
+        .tab-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── View 1: Process Telemetry (Clean SCADA) ────────── */
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+
+        .panel-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .panel-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .zone-pill {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 999px;
+            letter-spacing: 0.05em;
+        }
+
+        .zone-real {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .zone-decoy {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .gauge-card {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: border-color 0.15s ease;
+        }
+
+        .gauge-card:hover {
+            border-color: var(--border-active);
+        }
+
+        .gauge-label {
+            font-family: var(--font-mono);
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .gauge-value {
+            font-family: var(--font-mono);
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .gauge-unit {
+            font-size: 0.95rem;
+            color: var(--accent-brand-hover);
+            font-weight: 500;
+            margin-left: 6px;
+        }
+
+        .gauge-status {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--status-success);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── View 2: SCADA Engineering Terminal ─────────────── */
+        .terminal-box {
+            background-color: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .term-header {
+            background: var(--surface-elevated);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .term-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .term-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .term-dot.r { background: #ef4444; }
+        .term-dot.y { background: #f59e0b; }
+        .term-dot.g { background: #10b981; }
+
+        .term-title {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .term-screen {
+            background: #050806;
+            padding: 18px;
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            line-height: 1.6;
+            height: 380px;
+            overflow-y: auto;
+            color: #d1fae5;
+            white-space: pre-wrap;
+        }
+
+        .term-prompt-line {
+            color: #10b981;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .term-res-out {
+            color: #a7f3d0;
+            margin-bottom: 8px;
+        }
+
+        .term-res-err {
+            color: #f87171;
+            margin-bottom: 8px;
+        }
+
+        .term-input-bar {
+            background: var(--surface-elevated);
+            padding: 12px 18px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            gap: 10px;
             align-items: center;
         }
 
-        #action-result {
-            margin-top: 12px;
-            min-height: 20px;
+        .term-prompt-symbol {
+            font-family: var(--font-mono);
             font-size: 0.9rem;
+            color: #10b981;
             font-weight: 700;
         }
 
-        .status-ok { color: var(--success); }
-        .status-fail { color: var(--danger); }
-
-        .stack {
-            display: grid;
-            gap: 10px;
+        .term-field {
+            flex: 1;
+            background: #080d0a;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            color: #f0fdf4;
         }
 
-        .row {
+        .term-field:focus {
+            outline: none;
+            border-color: var(--accent-brand);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+        }
+
+        .btn-term-send {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-term-send:hover {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        /* ── View 3: Process Historian Data Logger ──────────── */
+        .historian-intro {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 260px;
+            background: #080d0a;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-heading);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--accent-brand);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+        }
+
+        .btn-filter {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .tag-shortcuts {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .btn-tag {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-family: var(--font-mono);
+            font-size: 0.74rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-tag:hover {
+            border-color: var(--accent-brand);
+            color: var(--text-heading);
+            background: var(--surface-accent);
+        }
+
+        .data-table-container {
+            overflow-x: auto;
+            max-height: 380px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            background: #080d0a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            font-family: var(--font-mono);
+            text-align: left;
+        }
+
+        th {
+            background: var(--surface-elevated);
+            color: var(--text-heading);
+            padding: 11px 14px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #142018;
+            color: var(--text-body);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background-color: var(--surface-accent);
+        }
+
+        .table-meta {
+            margin-top: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.74rem;
+            color: var(--text-muted);
             display: flex;
             justify-content: space-between;
-            padding: 10px 12px;
-            background: var(--surface-soft);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: #2f4458;
-            font-size: 0.92rem;
-        }
-
-        .field-label {
-            margin: 0;
-            font-size: 0.85rem;
-            color: var(--muted);
-            font-weight: 700;
-        }
-
-        .db-select {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            background: var(--surface-soft);
-            color: #294055;
-            padding: 10px 12px;
-            font: inherit;
-            font-weight: 700;
-        }
-
-        .db-select:focus {
-            outline: none;
-            border-color: var(--brand);
-            box-shadow: 0 0 0 4px rgba(15, 123, 108, 0.12);
-        }
-
-        @media (max-width: 960px) {
-            body { padding: 16px; }
-            .grid { grid-template-columns: 1fr; }
-            .controls { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <main class="shell">
-        <section class="hero">
-            <h1>Workstation Operations Center</h1>
-            <div class="meta">
-                <span class="chip">User: {{ username }}</span>
-                <span class="chip">Role: {{ role|upper }}</span>
-                <span class="chip">Node: {{ device_profile.component }}</span>
-                <span class="chip">IP: {{ device_profile.ip }}</span>
-                <span class="chip">MAC: {{ device_profile.mac }}</span>
-                <span class="chip">SN: {{ device_profile.serial }}</span>
-                <span class="chip">Model: {{ device_profile.model }}</span>
-            </div>
-        </section>
-
-        <section class="grid">
-            <article class="panel">
-                <h2>Command Controls</h2>
-                <div class="controls">
-                    <button class="btn btn-primary" id="ack-alarm" type="button">Acknowledge Alarm</button>
-                    <button class="btn btn-ghost" id="basic-control" type="button">Basic Control</button>
-                    {% if role in ['engineer', 'admin'] %}
-                    <button class="btn btn-ghost" id="engineering-tool" type="button">Engineering Tool</button>
-                    {% endif %}
-                    {% if role == 'admin' %}
-                    <button class="btn btn-ghost" id="system-config" type="button">System Configuration</button>
-                    {% endif %}
+    <div class="shell">
+        <!-- ── Unified Header ───────────────────────────────── -->
+        <header class="header">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                    </svg>
                 </div>
-                <p id="action-result"></p>
-            </article>
+                <div>
+                    <h1 class="brand-title">ARABCO</h1>
+                    <div class="brand-desc">SCADA WORKSTATION // LEVEL 3</div>
+                </div>
+            </div>
 
-            <article class="panel stack">
-                <h2>Navigation</h2>
-                <p class="field-label">Target Database</p>
-                <select id="db-selector" class="db-select">
-                    <option value="sensor_readings_historian">Sensor Readings Historian</option>
-                    <option value="maintenance_times_historian">Maintenance Times Historian</option>
-                    <option value="components_historian">Components Historian</option>
-                    <option value="user_historian">User Historian</option>
-                </select>
+            <div class="header-meta">
+                <div class="chip">
+                    <span class="status-dot"></span>
+                    <span>ONLINE</span>
+                </div>
+                <div class="chip">
+                    <span class="chip-label">Node:</span>
+                    <span>{{ device_profile.component }}</span>
+                </div>
+                <div class="chip">
+                    <span class="chip-label">IP:</span>
+                    <span>{{ device_profile.ip }}</span>
+                </div>
+                <div class="chip">
+                    <span class="chip-label">Role:</span>
+                    <span style="color: #34d399; font-weight: 600;">{{ role|upper }}</span>
+                </div>
+                <div class="chip">
+                    <span class="chip-label">User:</span>
+                    <span>{{ username }}</span>
+                </div>
+                <a href="/logout" class="btn-signout">Sign Out</a>
+            </div>
+        </header>
 
-                <a class="btn btn-primary btn-link" id="historian-link"
-                    href="http://localhost:5005/handoff?username={{ username }}&role={{ role }}&selected_db=sensor_readings_historian">Open
-                    Historian Query Console</a>
-                <a class="btn btn-ghost btn-link" id="logout-link" href="/logout">Logout</a>
-                <div class="row"><span>Historian Target</span><strong>localhost:5005/query</strong></div>
-                <div class="row"><span>Workstation Session</span><strong>Active</strong></div>
-                <div class="row"><span>Vendor</span><strong>{{ device_profile.vendor }}</strong></div>
-            </article>
-        </section>
+        <!-- ── Navigation Tab Bar ────────────────────────────── -->
+        <nav class="tab-bar">
+            <button class="tab-btn active" data-tab="tab-telemetry">
+                <svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 16l4-8 4 6 4-10"/></svg>
+                Process Telemetry
+            </button>
+            <button class="tab-btn" data-tab="tab-terminal">
+                <svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+                SCADA Terminal
+            </button>
+            <button class="tab-btn" data-tab="tab-historian">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                Historian Data Logger
+            </button>
+        </nav>
 
-        <section class="panel" style="margin-top: 20px;">
-            <h2>SCADA Terminal</h2>
-            <div id="terminal-output" style="background: #1e1e1e; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 10px;"></div>
-            <div style="display: flex; gap: 10px;">
-                <span style="font-family: monospace; font-weight: bold; align-self: center;">$&gt;</span>
-                <input type="text" id="terminal-input" style="flex: 1; padding: 10px; font-family: monospace; border: 1px solid var(--border); border-radius: 4px; background: #2d2d2d; color: #fff;" placeholder="Enter command..." autocomplete="off">
-                <button id="terminal-send" class="btn btn-primary">Send</button>
+        <!-- ── Tab 1: Live SCADA Process Telemetry ───────────── -->
+        <section id="tab-telemetry" class="tab-view active">
+            <div class="card">
+                <div class="panel-heading">
+                    <div class="panel-title">Real-Time Process Telemetry (Level 2 Physics Engine)</div>
+                    <div id="zone-badge" class="zone-pill zone-real">ZONE: REFINERY CDU-01 (ACTIVE)</div>
+                </div>
+
+                <div class="telemetry-grid">
+                    <div class="gauge-card">
+                        <span class="gauge-label">Column Pressure (PT-101)</span>
+                        <div class="gauge-value"><span id="val-pressure">132.11</span><span class="gauge-unit">PSI</span></div>
+                        <div class="gauge-status"><span>●</span> NORMAL REGULATION</div>
+                    </div>
+
+                    <div class="gauge-card">
+                        <span class="gauge-label">Reactor Temp (TT-101)</span>
+                        <div class="gauge-value"><span id="val-temp">24.98</span><span class="gauge-unit">°C</span></div>
+                        <div class="gauge-status"><span>●</span> PID AUTO CONTROL</div>
+                    </div>
+
+                    <div class="gauge-card">
+                        <span class="gauge-label">Crude Flow Rate (FT-104)</span>
+                        <div class="gauge-value"><span id="val-flow">12.02</span><span class="gauge-unit">m³/h</span></div>
+                        <div class="gauge-status"><span>●</span> FEED THROUGHPUT OK</div>
+                    </div>
+
+                    <div class="gauge-card">
+                        <span class="gauge-label">Feed Pump Speed (P-101A)</span>
+                        <div class="gauge-value"><span id="val-rpm">1200</span><span class="gauge-unit">RPM</span></div>
+                        <div class="gauge-status"><span>●</span> DRIVE NOMINAL</div>
+                    </div>
+
+                    <div class="gauge-card">
+                        <span class="gauge-label">Safety Bypass Valve (XV-107)</span>
+                        <div class="gauge-value"><span id="val-valve">50.0</span><span class="gauge-unit">%</span></div>
+                        <div class="gauge-status"><span>●</span> INTERLOCK CLOSED</div>
+                    </div>
+
+                    <div class="gauge-card">
+                        <span class="gauge-label">Process Viscosity</span>
+                        <div class="gauge-value"><span id="val-visc">1.00</span><span class="gauge-unit">cP</span></div>
+                        <div class="gauge-status"><span>●</span> QUALITY ASSURED</div>
+                    </div>
+                </div>
             </div>
         </section>
-    </main>
+
+        <!-- ── Tab 2: SCADA Engineering Terminal ─────────────── -->
+        <section id="tab-terminal" class="tab-view">
+            <div class="terminal-box">
+                <div class="term-header">
+                    <div class="term-controls">
+                        <div class="term-dot r"></div>
+                        <div class="term-dot y"></div>
+                        <div class="term-dot g"></div>
+                    </div>
+                    <div class="term-title">ARABCO INDUSTRIAL TERMINAL // VT100 EMULATOR ({{ username }}@{{ device_profile.component }})</div>
+                    <div></div>
+                </div>
+
+                <div id="term-display" class="term-screen">
+<div>ARABCO Operational Technology Console v3.4-ot</div>
+<div>Logged in as {{ username }} (Role: {{ role }}) on node {{ device_profile.component }} ({{ device_profile.ip }})</div>
+<div>Type 'help' for available commands, or run diagnostic fieldbus utilities (ls, whoami, mbtget, snap7, nmap, ping).</div>
+                </div>
+
+                <div class="term-input-bar">
+                    <span class="term-prompt-symbol">{{ username }}@scada:~$</span>
+                    <input type="text" id="term-cmd-field" class="term-field" placeholder="Enter shell or SCADA fieldbus command..." autocomplete="off">
+                    <button id="btn-term-run" class="btn-term-send">Run</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Tab 3: Process Historian Data Logger ──────────── -->
+        <section id="tab-historian" class="tab-view">
+            <div class="card">
+                <div class="panel-heading">
+                    <div class="panel-title">SCADA Process Historian Archive</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                        TABLE: sensor_readings // REFINERY ARCHIVE
+                    </div>
+                </div>
+
+                <p class="historian-intro">
+                    The Industrial Historian continuously archives time-series sensor telemetry, pressure gradients, and controller signals from Level 1/2 fieldbuses to support operational auditability and process regulation.
+                </p>
+
+                <div class="filter-row">
+                    <input type="text" id="historian-input" class="filter-input" placeholder="Filter by Sensor Tag or Name (e.g. Temperature, Pressure, TT-101)..." value="">
+                    <button id="btn-historian-fetch" class="btn-filter">Query Archive</button>
+                </div>
+
+                <div class="tag-shortcuts">
+                    <button class="btn-tag" data-tag="">All Active Tags</button>
+                    <button class="btn-tag" data-tag="Temp">Furnace Temperatures</button>
+                    <button class="btn-tag" data-tag="Pressure">Pressure Monitors</button>
+                    <button class="btn-tag" data-tag="Flow">Flow Telemetry</button>
+                    <button class="btn-tag" data-tag="ESD">Safety Interlocks</button>
+                </div>
+
+                <div class="data-table-container">
+                    <table>
+                        <thead>
+                            <tr id="hist-thead-row">
+                                <th>ID</th>
+                                <th>TAG ID</th>
+                                <th>SENSOR NAME</th>
+                                <th>VALUE</th>
+                                <th>UNIT</th>
+                                <th>STATUS</th>
+                                <th>LOCATION</th>
+                                <th>TIMESTAMP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hist-tbody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading sensor archives...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-meta">
+                    <span id="hist-query-echo">Query: Default sensor archive</span>
+                    <span id="hist-count-echo">0 records loaded</span>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script>
-        function trackActivity(event, target, destination) {
-            const payload = {
-                event,
-                target,
-                path: window.location.pathname,
-                destination: destination || 'NONE'
-            };
+        /* ── Tab Switcher Logic ────────────────────────────── */
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabViews = document.querySelectorAll('.tab-view');
 
-            fetch('/activity', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                keepalive: true
-            }).catch(() => {});
-        }
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-tab');
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabViews.forEach(v => v.classList.remove('active'));
 
-        const dbSelector = document.getElementById('db-selector');
-        const historianLink = document.getElementById('historian-link');
+                btn.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
 
-        function buildHistorianHandoffUrl() {
-            const targetDb = dbSelector.value;
-            const username = encodeURIComponent('{{ username }}');
-            const role = encodeURIComponent('{{ role }}');
-            return `http://localhost:5005/handoff?username=${username}&role=${role}&selected_db=${encodeURIComponent(targetDb)}`;
-        }
-
-        function refreshHistorianLink() {
-            if (historianLink) {
-                historianLink.href = buildHistorianHandoffUrl();
-            }
-        }
-
-        dbSelector.addEventListener('change', function () {
-            refreshHistorianLink();
-            trackActivity('SELECT', 'db-selector', dbSelector.value);
-        });
-
-        if (historianLink) {
-            historianLink.addEventListener('click', function () {
-                refreshHistorianLink();
-                trackActivity('CLICK', 'historian-link', historianLink.href);
-            });
-        }
-
-        refreshHistorianLink();
-
-        document.getElementById('logout-link').addEventListener('click', function () {
-            trackActivity('CLICK', 'logout-link', '/logout');
-        });
-
-        async function triggerAction(actionPath, targetId) {
-            trackActivity('CLICK', targetId, actionPath);
-            const resultNode = document.getElementById('action-result');
-            try {
-                const response = await fetch(actionPath, { method: 'POST' });
-                const payload = await response.json();
-                if (!response.ok) {
-                    resultNode.textContent = payload.error || 'Action failed';
-                    resultNode.className = 'status-fail';
-                    return;
+                if (targetId === 'tab-terminal') {
+                    document.getElementById('term-cmd-field').focus();
                 }
-                resultNode.textContent = payload.message || 'Action completed';
-                resultNode.className = 'status-ok';
-            } catch (err) {
-                resultNode.textContent = 'Action request error';
-                resultNode.className = 'status-fail';
-            }
-        }
-
-        const ackAlarmBtn = document.getElementById('ack-alarm');
-        const basicControlBtn = document.getElementById('basic-control');
-        const engineeringToolBtn = document.getElementById('engineering-tool');
-        const systemConfigBtn = document.getElementById('system-config');
-
-        ackAlarmBtn.addEventListener('click', function () {
-            triggerAction('/action/ack-alarm', 'ack-alarm');
+            });
         });
 
-        basicControlBtn.addEventListener('click', function () {
-            triggerAction('/action/basic-control', 'basic-control');
-        });
-
-        if (engineeringToolBtn) {
-            engineeringToolBtn.addEventListener('click', function () {
-                triggerAction('/action/engineering-tool', 'engineering-tool');
-            });
-        }
-
-        if (systemConfigBtn) {
-            systemConfigBtn.addEventListener('click', function () {
-                triggerAction('/action/system-config', 'system-config');
-            });
-        }
-
-        const terminalOutput = document.getElementById('terminal-output');
-        const terminalInput = document.getElementById('terminal-input');
-        const terminalSend = document.getElementById('terminal-send');
-
-        function appendTerminal(text, type='output') {
-            const div = document.createElement('div');
-            div.textContent = text;
-            if (type === 'input') div.style.color = '#fff';
-            if (type === 'error') div.style.color = '#ff5555';
-            terminalOutput.appendChild(div);
-            terminalOutput.scrollTop = terminalOutput.scrollHeight;
-        }
-
-        terminalSend.addEventListener('click', async () => {
-            const cmd = terminalInput.value.trim();
-            if (!cmd) return;
-            terminalInput.value = '';
-            appendTerminal('$ ' + cmd, 'input');
-            
+        /* ── Real-Time SCADA Telemetry Poller (Live Physics) ── */
+        async function updatePhysicsMetrics() {
             try {
-                const response = await fetch('/action/terminal', {
+                const res = await fetch('/api/l2/metrics');
+                if (!res.ok) return;
+                const d = await res.json();
+
+                if (d.pressure !== undefined && d.pressure !== null) {
+                    document.getElementById('val-pressure').textContent = Number(d.pressure).toFixed(2);
+                }
+                if (d.temperature !== undefined && d.temperature !== null) {
+                    document.getElementById('val-temp').textContent = Number(d.temperature).toFixed(2);
+                }
+                if (d.flow_rate !== undefined && d.flow_rate !== null) {
+                    document.getElementById('val-flow').textContent = Number(d.flow_rate).toFixed(2);
+                }
+                if (d.pump_rpm !== undefined && d.pump_rpm !== null) {
+                    document.getElementById('val-rpm').textContent = Math.round(d.pump_rpm);
+                }
+                if (d.valve_pos !== undefined && d.valve_pos !== null) {
+                    document.getElementById('val-valve').textContent = (d.valve_pos * 100).toFixed(1);
+                }
+                if (d.viscosity !== undefined && d.viscosity !== null) {
+                    document.getElementById('val-visc').textContent = Number(d.viscosity).toFixed(2);
+                }
+
+                const zoneBadge = document.getElementById('zone-badge');
+                zoneBadge.textContent = 'ZONE: REFINERY CDU-01 (ACTIVE)';
+                zoneBadge.className = 'zone-pill zone-real';
+            } catch (err) {}
+        }
+
+        setInterval(updatePhysicsMetrics, 2000);
+        updatePhysicsMetrics();
+
+        /* ── SCADA Terminal Dispatcher ─────────────────────── */
+        const termScreen = document.getElementById('term-display');
+        const termInput = document.getElementById('term-cmd-field');
+        const btnTermRun = document.getElementById('btn-term-run');
+
+        function appendTerm(text, type='out') {
+            const div = document.createElement('div');
+            if (type === 'cmd') {
+                div.className = 'term-prompt-line';
+                div.textContent = text;
+            } else if (type === 'err') {
+                div.className = 'term-res-err';
+                div.textContent = text;
+            } else {
+                div.className = 'term-res-out';
+                div.textContent = text;
+            }
+            termScreen.appendChild(div);
+            termScreen.scrollTop = termScreen.scrollHeight;
+        }
+
+        async function execTerminal() {
+            const cmd = termInput.value.trim();
+            if (!cmd) return;
+            termInput.value = '';
+
+            appendTerm('{{ username }}@scada:~$ ' + cmd, 'cmd');
+
+            if (cmd === 'clear') {
+                termScreen.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch('/action/terminal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command: cmd })
                 });
-                const data = await response.json();
-                if (data.output) {
-                    appendTerminal(data.output, 'output');
-                }
-                if (data.error) {
-                    appendTerminal(data.error, 'error');
-                }
-            } catch (err) {
-                appendTerminal('Network error', 'error');
+                const data = await res.json();
+                if (data.output) appendTerm(data.output, 'out');
+                if (data.error) appendTerm(data.error, 'err');
+            } catch (e) {
+                appendTerm('Communication failure: ' + e.message, 'err');
             }
+        }
+
+        btnTermRun.addEventListener('click', execTerminal);
+        termInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') execTerminal();
         });
 
-        terminalInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') terminalSend.click();
+        /* ── Process Historian Archive Table ───────────────── */
+        const histInput = document.getElementById('historian-input');
+        const btnHistFetch = document.getElementById('btn-historian-fetch');
+        const histTbody = document.getElementById('hist-tbody');
+        const histTheadRow = document.getElementById('hist-thead-row');
+        const histQueryEcho = document.getElementById('hist-query-echo');
+        const histCountEcho = document.getElementById('hist-count-echo');
+
+        async function queryHistorian(query) {
+            histTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 18px;">Retrieving telemetry...</td></tr>';
+            try {
+                const res = await fetch('/api/historian/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                const payload = await res.json();
+
+                histQueryEcho.textContent = 'Query Filter: ' + (payload.query || query || 'All Sensors');
+                histCountEcho.textContent = (payload.count || 0) + ' records retrieved (' + (payload.elapsed_ms || 0) + ' ms)';
+
+                if (payload.columns && payload.columns.length > 0) {
+                    let headHtml = '';
+                    payload.columns.forEach(col => {
+                        headHtml += '<th>' + col.toUpperCase() + '</th>';
+                    });
+                    histTheadRow.innerHTML = headHtml;
+                }
+
+                if (!payload.rows || payload.rows.length === 0) {
+                    histTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 18px;">No matching records found.</td></tr>';
+                    return;
+                }
+
+                let bodyHtml = '';
+                payload.rows.forEach(r => {
+                    bodyHtml += '<tr>';
+                    r.forEach(c => {
+                        bodyHtml += '<td>' + (c !== null && c !== undefined ? String(c) : '<span style="color:#666">NULL</span>') + '</td>';
+                    });
+                    bodyHtml += '</tr>';
+                });
+                histTbody.innerHTML = bodyHtml;
+
+            } catch (err) {
+                histTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #f87171; padding: 18px;">Archive query error: ' + err.message + '</td></tr>';
+            }
+        }
+
+        btnHistFetch.addEventListener('click', () => queryHistorian(histInput.value.trim()));
+        histInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') queryHistorian(histInput.value.trim());
         });
+
+        document.querySelectorAll('.btn-tag').forEach(b => {
+            b.addEventListener('click', () => {
+                const t = b.getAttribute('data-tag');
+                histInput.value = t;
+                queryHistorian(t);
+            });
+        });
+
+        // Initial load of historian records
+        queryHistorian('');
     </script>
 </body>
 </html>

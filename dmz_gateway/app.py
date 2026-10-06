@@ -381,48 +381,52 @@ def proxy_root(subpath='dashboard'):
     ip = get_client_ip()
 
     # Deep Inspection of HTTP path, query string, and data for Command/SQL Injections
-    qs = request.query_string.decode('utf-8', errors='ignore')
-    payload_to_check = f"{subpath}?{qs}"
-    try:
-        raw_body = request.get_data(as_text=True)
-        if raw_body:
-            payload_to_check += f" {raw_body[:500]}"
-    except Exception:
-        pass
+    # Note: Authenticated legitimate corporate users on REAL_INDUSTRIAL communicating with their
+    # own engineering workstation terminal/tools must stay on the legitimate production workstation.
+    if routing_world != 'REAL_INDUSTRIAL':
+        qs = request.query_string.decode('utf-8', errors='ignore')
+        payload_to_check = f"{subpath}?{qs}"
+        try:
+            raw_body = request.get_data(as_text=True)
+            if raw_body:
+                payload_to_check += f" {raw_body[:500]}"
+        except Exception:
+            pass
 
-    is_exploit, exp_reason, exp_tactic = anomaly_detector.inspect_generic_payload(payload_to_check)
-    if is_exploit:
-        # Immediate active quarantine to Deception Sandbox
-        session['routing_world'] = 'SANDBOX_DECEPTION'
-        session['actor_type'] = 'attacker'
-        session['quarantine_reason'] = exp_reason
-        session['quarantine_tactic'] = exp_tactic
-        routing_world = 'SANDBOX_DECEPTION'
-        actor_type = 'attacker'
-        _stats['quarantined_sessions'] += 1
+        is_exploit, exp_reason, exp_tactic = anomaly_detector.inspect_generic_payload(payload_to_check)
+        if is_exploit:
+            # Immediate active quarantine to Deception Sandbox
+            session['routing_world'] = 'SANDBOX_DECEPTION'
+            session['actor_type'] = 'attacker'
+            session['quarantine_reason'] = exp_reason
+            session['quarantine_tactic'] = exp_tactic
+            routing_world = 'SANDBOX_DECEPTION'
+            actor_type = 'attacker'
+            _stats['quarantined_sessions'] += 1
 
-        telemetry_logger.log_event_to_story(
-            event_type="exploit_attempt_diverted_to_sandbox",
-            message=f"Threat intercepted: {exp_reason}",
-            severity="critical",
-            details={
-                "ip": ip,
-                "user_agent": request.headers.get('User-Agent', ''),
-                "username": session.get('user', 'attacker'),
-                "tactic": exp_tactic,
-                "payload": payload_to_check[:100]
-            }
-        )
+            telemetry_logger.log_event_to_story(
+                event_type="exploit_attempt_diverted_to_sandbox",
+                message=f"Threat intercepted: {exp_reason}",
+                severity="critical",
+                details={
+                    "ip": ip,
+                    "user_agent": request.headers.get('User-Agent', ''),
+                    "username": session.get('user', 'attacker'),
+                    "tactic": exp_tactic,
+                    "payload": payload_to_check[:100]
+                }
+            )
 
-        telemetry_logger.log_routing_telemetry(
-            src_ip=ip,
-            user_agent=request.headers.get('User-Agent', ''),
-            username=session.get('user', 'attacker'),
-            routing_world="SANDBOX_DECEPTION",
-            actor_type="attacker",
-            tactic=exp_tactic,
-            reason=exp_reason
-        )
+            telemetry_logger.log_routing_telemetry(
+                src_ip=ip,
+                user_agent=request.headers.get('User-Agent', ''),
+                username=session.get('user', 'attacker'),
+                routing_world="SANDBOX_DECEPTION",
+                actor_type="attacker",
+                tactic=exp_tactic,
+                reason=exp_reason
+            )
+
 
     if routing_world == 'REAL_INDUSTRIAL':
         if session.get('role') == 'operator':

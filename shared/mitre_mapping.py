@@ -36,6 +36,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "modbus_write": {
         "mitre_tactic":         "Impair Process Control",
@@ -44,6 +45,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "modbus_read": {
         "mitre_tactic":         "Collection",
@@ -52,6 +54,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "credential_discovery": {
         "mitre_tactic":         "Credential Access",
@@ -60,6 +63,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "lateral_movement": {
         "mitre_tactic":         "Lateral Movement",
@@ -68,6 +72,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "network_scan": {
         "mitre_tactic":         "Reconnaissance",
@@ -76,6 +81,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 4",
     },
     "terminal_cmd": {
         "mitre_tactic":         "Execution",
@@ -84,6 +90,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "forced_write": {
         "mitre_tactic":         "Impair Process Control",
@@ -92,6 +99,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "replay_attack": {
         "mitre_tactic":         "Impair Process Control",
@@ -100,6 +108,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
 
     # ── S7comm / Siemens (Level 2) ──────────────────────────────────────────
@@ -110,6 +119,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "S7comm",
+        "detection_layer":      "Layer 1",
     },
     "s7_read": {
         "mitre_tactic":         "Collection",
@@ -118,6 +128,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "S7comm",
+        "detection_layer":      "Layer 1",
     },
     "s7_write": {
         "mitre_tactic":         "Impair Process Control",
@@ -126,6 +137,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "S7comm",
+        "detection_layer":      "Layer 1",
     },
     "s7_stop_cpu": {
         "mitre_tactic":         "Inhibit Response Function",
@@ -134,6 +146,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "S7comm",
+        "detection_layer":      "Layer 1",
     },
 
     # ── DNP3 (Level 1) ──────────────────────────────────────────────────────
@@ -144,6 +157,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "DNP3",
+        "detection_layer":      "Layer 1",
     },
     "dnp3_write": {
         "mitre_tactic":         "Impair Process Control",
@@ -152,6 +166,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "DNP3",
+        "detection_layer":      "Layer 1",
     },
     "dnp3_direct_operate": {
         "mitre_tactic":         "Impair Process Control",
@@ -160,6 +175,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "DNP3",
+        "detection_layer":      "Layer 1",
     },
     "dnp3_unsolicited": {
         "mitre_tactic":         "Collection",
@@ -168,6 +184,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "DNP3",
+        "detection_layer":      "Layer 1",
     },
     "S7COMM_PROBE": {
         "mitre_tactic":         "Discovery",
@@ -176,6 +193,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "S7comm",
+        "detection_layer":      "Layer 1",
     },
     "DNP3_PROBE": {
         "mitre_tactic":         "Discovery",
@@ -184,6 +202,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "DNP3",
+        "detection_layer":      "Layer 1",
     },
 
     # ── SSH / SCADA Workstation (Level 3) ───────────────────────────────────
@@ -194,6 +213,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "ssh_bruteforce": {
         "mitre_tactic":         "Lateral Movement",
@@ -202,6 +222,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "ssh_command": {
         "mitre_tactic":         "Execution",
@@ -210,6 +231,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
     "ssh_recon": {
         "mitre_tactic":         "Discovery",
@@ -218,6 +240,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 1 - IT Intrusion",
         "purdue_level":         "Level 2",
         "protocol":             "SSH",
+        "detection_layer":      "Layer 2",
     },
 
     # ── ML-engine anomaly types ──────────────────────────────────────────────
@@ -228,6 +251,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "LSTM_AUTOENCODER": {
         "mitre_tactic":         "Impair Process Control",
@@ -236,6 +260,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "REPLAY_LSTM": {
         "mitre_tactic":         "Impair Process Control",
@@ -244,6 +269,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
     "SEMANTIC_INJECTION": {
         "mitre_tactic":         "Impair Process Control",
@@ -252,6 +278,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 1",
     },
     "CROSS_LAYER_ANOMALY": {
         "mitre_tactic":         "Evasion",
@@ -260,6 +287,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 2",
     },
     "STEALTH_DRIFT": {
         "mitre_tactic":         "Impair Process Control",
@@ -268,6 +296,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
     "OVER_PRESSURE": {
         "mitre_tactic":         "Damage to Property",
@@ -276,6 +305,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 0",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
     "DRIFT_ATTACK": {
         "mitre_tactic":         "Impair Process Control",
@@ -284,6 +314,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
     "ZERO_VARIANCE": {
         "mitre_tactic":         "Impair Process Control",
@@ -292,6 +323,7 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
     },
     "REPLAY_FINGERPRINT": {
         "mitre_tactic":         "Impair Process Control",
@@ -300,6 +332,99 @@ TECHNIQUE_MAP: dict[str, dict[str, str]] = {
         "kill_chain_stage":     "Stage 2 - ICS Impact",
         "purdue_level":         "Level 2",
         "protocol":             "Modbus",
+        "detection_layer":      "Layer 0",
+    },
+
+    # ── Multi-Layered Monitor Zone Detections ─────────────────────────────
+    "lstm_ae_proc": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0831",
+        "mitre_technique_name": "Manipulation of Control",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 0",
+        "protocol":             "Process Dynamics",
+        "detection_layer":      "Layer 0",
+    },
+    "lstm_ae_net": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0855",
+        "mitre_technique_name": "Unauthorized Command Message",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 1",
+        "protocol":             "Fieldbus Telemetry",
+        "detection_layer":      "Layer 1",
+    },
+    "if_proc": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0836",
+        "mitre_technique_name": "Modify Parameter",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 0",
+        "protocol":             "Process Dynamics",
+        "detection_layer":      "Layer 0",
+    },
+    "if_net": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0806",
+        "mitre_technique_name": "Brute Force I/O",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 1",
+        "protocol":             "Fieldbus Telemetry",
+        "detection_layer":      "Layer 1",
+    },
+    "layer_0_detection": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0831",
+        "mitre_technique_name": "Manipulation of Control",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 0",
+        "protocol":             "Process Dynamics",
+        "detection_layer":      "Layer 0",
+    },
+    "layer_1_detection": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0855",
+        "mitre_technique_name": "Unauthorized Command Message",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Level 1",
+        "protocol":             "Fieldbus Protocols",
+        "detection_layer":      "Layer 1",
+    },
+    "layer_2_detection": {
+        "mitre_tactic":         "Lateral Movement",
+        "mitre_technique_id":   "T0886",
+        "mitre_technique_name": "Remote Services",
+        "kill_chain_stage":     "Stage 1 - IT Intrusion",
+        "purdue_level":         "Level 2",
+        "protocol":             "SCADA / SSH",
+        "detection_layer":      "Layer 2",
+    },
+    "layer_3_detection": {
+        "mitre_tactic":         "Collection",
+        "mitre_technique_id":   "T0809",
+        "mitre_technique_name": "Data from Information Repositories",
+        "kill_chain_stage":     "Stage 1 - IT Intrusion",
+        "purdue_level":         "Level 3",
+        "protocol":             "Workstation API",
+        "detection_layer":      "Layer 3",
+    },
+    "layer_4_detection": {
+        "mitre_tactic":         "Initial Access",
+        "mitre_technique_id":   "T0817",
+        "mitre_technique_name": "Exploit Public-Facing Application",
+        "kill_chain_stage":     "Stage 1 - IT Intrusion",
+        "purdue_level":         "Level 3.5",
+        "protocol":             "HTTP/S",
+        "detection_layer":      "Layer 4",
+    },
+    "alert_fused": {
+        "mitre_tactic":         "Impair Process Control",
+        "mitre_technique_id":   "T0855",
+        "mitre_technique_name": "Fused Multi-Layer Cyber-Physical Anomaly",
+        "kill_chain_stage":     "Stage 2 - ICS Impact",
+        "purdue_level":         "Cross-Layer",
+        "protocol":             "Multi-Protocol",
+        "detection_layer":      "Alert Fused",
     },
 }
 
@@ -311,6 +436,7 @@ _UNKNOWN: dict[str, str] = {
     "kill_chain_stage":     "Unknown",
     "purdue_level":         "Unknown",
     "protocol":             "Unknown",
+    "detection_layer":      "Unknown",
 }
 
 
@@ -346,5 +472,6 @@ def enrich_point(point, event_type: str):
      .tag("mitre_technique_name",  meta["mitre_technique_name"])
      .tag("kill_chain_stage",      meta["kill_chain_stage"])
      .tag("purdue_level",          meta["purdue_level"])
-     .tag("protocol",              meta["protocol"]))
+     .tag("protocol",              meta["protocol"])
+     .tag("detection_layer",      meta.get("detection_layer", "Layer 1")))
     return point

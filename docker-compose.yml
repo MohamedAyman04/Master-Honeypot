@@ -245,6 +245,7 @@ services:
     volumes:
       - shared-data:/data # model files persisted here
       - ./shared:/app/shared:ro # MITRE mapping table
+      - ./ml-engine/trainer.py:/app/trainer.py:ro
     depends_on:
       historian:
         condition: service_started
@@ -308,7 +309,7 @@ services:
       - WORKSTATION_SERIAL=FAC-ENG-2401
       - WORKSTATION_MODEL=Siemens IPC477E Industrial PC
       - WORKSTATION_VENDOR=Siemens
-      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_PHYSICS_URL=http://192.168.50.11:5100
       - LEVEL2_HISTORIAN_URL=http://historian_api:5000
       - STORY_LOGGER_URL=http://story_logger:8600
       - STORY_RUN_ID=${STORY_RUN_ID}
@@ -320,7 +321,7 @@ services:
         ipv4_address: 192.168.50.21
     depends_on:
       - story_logger
-      - ics_scada_ssh
+      - normal_scada_server
     restart: unless-stopped
 
   workstation_eng_02:
@@ -338,7 +339,7 @@ services:
       - WORKSTATION_SERIAL=FAC-ENG-2402
       - WORKSTATION_MODEL=Siemens IPC677E High-End Engineering PC
       - WORKSTATION_VENDOR=Siemens
-      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_PHYSICS_URL=http://192.168.50.11:5100
       - LEVEL2_HISTORIAN_URL=http://historian_api:5000
       - STORY_LOGGER_URL=http://story_logger:8600
       - STORY_RUN_ID=${STORY_RUN_ID}
@@ -347,7 +348,7 @@ services:
         ipv4_address: 192.168.50.22
     depends_on:
       - story_logger
-      - ics_scada_ssh
+      - normal_scada_server
     restart: unless-stopped
 
   workstation_ops_01:
@@ -365,7 +366,7 @@ services:
       - WORKSTATION_SERIAL=FAC-OPS-3101
       - WORKSTATION_MODEL=Rockwell Automation ASEM 6300B Industrial PC
       - WORKSTATION_VENDOR=Rockwell Automation
-      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_PHYSICS_URL=http://192.168.50.11:5100
       - LEVEL2_HISTORIAN_URL=http://historian_api:5000
       - STORY_LOGGER_URL=http://story_logger:8600
       - STORY_RUN_ID=${STORY_RUN_ID}
@@ -374,7 +375,7 @@ services:
         ipv4_address: 192.168.50.31
     depends_on:
       - story_logger
-      - ics_scada_ssh
+      - normal_scada_server
     restart: unless-stopped
 
   workstation_ops_02:
@@ -392,7 +393,7 @@ services:
       - WORKSTATION_SERIAL=FAC-OPS-3102
       - WORKSTATION_MODEL=Advantech UNO-2484G Industrial Box PC
       - WORKSTATION_VENDOR=Advantech
-      - LEVEL2_PHYSICS_URL=http://192.168.50.10:5100
+      - LEVEL2_PHYSICS_URL=http://192.168.50.11:5100
       - LEVEL2_HISTORIAN_URL=http://historian_api:5000
       - STORY_LOGGER_URL=http://story_logger:8600
       - STORY_RUN_ID=${STORY_RUN_ID}
@@ -401,7 +402,7 @@ services:
         ipv4_address: 192.168.50.32
     depends_on:
       - story_logger
-      - ics_scada_ssh
+      - normal_scada_server
     restart: unless-stopped
 
   # ── Purdue Level 3 — Industrial OPC-UA & Enterprise Historian ────────────────
@@ -414,14 +415,14 @@ services:
       - OPCUA_PUSH_SECONDS=15
       - OPCUA_METRICS_PORT=9108
       - PYTHONUNBUFFERED=1
-      - LEVEL2_PULL_URL=http://192.168.50.10:5100/api/physics/metrics
+      - LEVEL2_PULL_URL=http://192.168.50.11:5100/api/physics/metrics
       - LEVEL2_SHARED_TOKEN=${L2L3_SHARED_TOKEN:-change-this-token}
       - LEVEL2_TIMEOUT_SECONDS=3.0
     networks:
       enterprise-net:
         ipv4_address: 192.168.50.50
     depends_on:
-      - ics_scada_ssh
+      - normal_scada_server
     restart: unless-stopped
 
   historian_l3:
@@ -686,7 +687,7 @@ services:
       context: ./workstations
       dockerfile: Dockerfile.decoy
     container_name: ws_decoy_eng
-    hostname: ws-eng-decoy-01
+    hostname: ws-eng-03
     mac_address: "02:42:c0:a8:63:15"
     ports:
       - "5026:5001"
@@ -695,8 +696,8 @@ services:
       - WORKSTATION_DB_NAME=workstation_1.db
       - WORKSTATION_DEVICE_IP=192.168.99.21
       - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:15
-      - WORKSTATION_SERIAL=FAC-ENG-DECOY-9901
-      - WORKSTATION_MODEL=Siemens IPC477E Decoy Engineering PC
+      - WORKSTATION_SERIAL=FAC-ENG-2403
+      - WORKSTATION_MODEL=Siemens IPC477E Industrial PC
       - WORKSTATION_VENDOR=Siemens Industrial
       - LEVEL2_PHYSICS_URL=http://ics_scada_ssh:5100
       - LEVEL2_HISTORIAN_URL=http://honeypot_historian_api:5000
@@ -719,7 +720,7 @@ services:
       context: ./workstations
       dockerfile: Dockerfile.decoy
     container_name: ws_decoy_eng_02
-    hostname: ws-eng-decoy-02
+    hostname: ws-eng-04
     mac_address: "02:42:c0:a8:63:16"
     ports:
       - "5028:5001"
@@ -728,8 +729,8 @@ services:
       - WORKSTATION_DB_NAME=workstation_2.db
       - WORKSTATION_DEVICE_IP=192.168.99.22
       - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:16
-      - WORKSTATION_SERIAL=FAC-ENG-DECOY-9903
-      - WORKSTATION_MODEL=Siemens IPC677E Decoy Engineering PC
+      - WORKSTATION_SERIAL=FAC-ENG-2404
+      - WORKSTATION_MODEL=Siemens IPC677E High-End Engineering PC
       - WORKSTATION_VENDOR=Siemens Industrial
       - LEVEL2_PHYSICS_URL=http://ics_scada_ssh:5100
       - LEVEL2_HISTORIAN_URL=http://honeypot_historian_api:5000
@@ -752,7 +753,7 @@ services:
       context: ./workstations
       dockerfile: Dockerfile.decoy
     container_name: ws_decoy_ops
-    hostname: ws-scada-ops-decoy-01
+    hostname: ws-ops-03
     mac_address: "02:42:c0:a8:63:31"
     ports:
       - "5027:5001"
@@ -761,8 +762,8 @@ services:
       - WORKSTATION_DB_NAME=workstation_3.db
       - WORKSTATION_DEVICE_IP=192.168.99.31
       - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:31
-      - WORKSTATION_SERIAL=FAC-OPS-DECOY-9902
-      - WORKSTATION_MODEL=Rockwell Automation ASEM 6300B Decoy Operator Console
+      - WORKSTATION_SERIAL=FAC-OPS-2403
+      - WORKSTATION_MODEL=Rockwell Automation ASEM 6300B Operator Console
       - WORKSTATION_VENDOR=Rockwell Automation
       - LEVEL2_PHYSICS_URL=http://ics_scada_ssh:5100
       - LEVEL2_HISTORIAN_URL=http://honeypot_historian_api:5000
@@ -785,7 +786,7 @@ services:
       context: ./workstations
       dockerfile: Dockerfile.decoy
     container_name: ws_decoy_ops_02
-    hostname: ws-scada-ops-decoy-02
+    hostname: ws-ops-04
     mac_address: "02:42:c0:a8:63:32"
     ports:
       - "5029:5001"
@@ -794,8 +795,8 @@ services:
       - WORKSTATION_DB_NAME=workstation_4.db
       - WORKSTATION_DEVICE_IP=192.168.99.32
       - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:32
-      - WORKSTATION_SERIAL=FAC-OPS-DECOY-9904
-      - WORKSTATION_MODEL=Advantech UNO-2484G Decoy Operator Console
+      - WORKSTATION_SERIAL=FAC-OPS-2404
+      - WORKSTATION_MODEL=Advantech UNO-2484G Operator Console
       - WORKSTATION_VENDOR=Advantech
       - LEVEL2_PHYSICS_URL=http://ics_scada_ssh:5100
       - LEVEL2_HISTORIAN_URL=http://honeypot_historian_api:5000
@@ -818,7 +819,7 @@ services:
       context: ./workstations
       dockerfile: Dockerfile.decoy
     container_name: ws_decoy_main
-    hostname: ws-decoy-main
+    hostname: ws-ccr-main
     mac_address: "02:42:c0:a8:63:20"
     ports:
       - "5030:5001"
@@ -827,7 +828,7 @@ services:
       - WORKSTATION_DB_NAME=workstation_1.db
       - WORKSTATION_DEVICE_IP=192.168.99.20
       - WORKSTATION_DEVICE_MAC=02:42:c0:a8:63:20
-      - WORKSTATION_SERIAL=FAC-MAIN-DECOY-9900
+      - WORKSTATION_SERIAL=FAC-MAIN-2400
       - WORKSTATION_MODEL=Siemens SIMATIC Field PG M6 Industrial Supervisory Workstation
       - WORKSTATION_VENDOR=Siemens Industry
       - LEVEL2_PHYSICS_URL=http://ics_scada_ssh:5100
@@ -846,6 +847,88 @@ services:
     depends_on:
       - story_logger
       - historian_api
+    restart: unless-stopped
+
+  # ── Purdue Level 2 — Normal Process Simulation (Enterprise Real Workstation Target) ──
+  normal_redis:
+    image: redis:latest
+    container_name: normal_state_store
+    networks:
+      - normal-ot-net
+    restart: always
+
+  normal_physics_engine:
+    image: master-honeypot-physics_simulator:latest
+    container_name: normal_physics_engine
+    command: python /app/physics/physics_process.py
+    networks:
+      - normal-ot-net
+    environment:
+      - REDIS_HOST=normal_redis
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./physics:/app/physics:ro
+    depends_on:
+      - normal_redis
+    restart: unless-stopped
+
+  normal_scada_server:
+    image: master-honeypot-ics_scada_ssh:latest
+    container_name: normal_scada_server
+    networks:
+      normal-ot-net: {}
+      enterprise-net:
+        ipv4_address: 192.168.50.11
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - REDIS_HOST=normal_redis
+      - PHYSICS_API_PORT=5100
+      - LOG_DIR=/var/log/scada
+      - L2L3_SHARED_TOKEN=${L2L3_SHARED_TOKEN:-change-this-token}
+      - PYTHONUNBUFFERED=1
+      - STORY_LOGGER_URL=http://story_logger:8600
+    depends_on:
+      - normal_redis
+      - normal_physics_engine
+    restart: unless-stopped
+
+  normal_plc_simulator:
+    image: master-honeypot-plc_simulator:latest
+    container_name: normal_plc_simulator
+    command: python /app/plc/modbus_server.py
+    networks:
+      - normal-ot-net
+    environment:
+      - REDIS_HOST=normal_redis
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - normal_redis
+      - normal_physics_engine
+    restart: unless-stopped
+
+  normal_ics_s7_plc:
+    image: master-honeypot-ics_s7_plc:latest
+    container_name: normal_ics_s7_plc
+    command: python /app/plc/s7_server.py
+    networks:
+      - normal-ot-net
+    environment:
+      - REDIS_HOST=normal_redis
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - normal_redis
+      - normal_physics_engine
+    restart: unless-stopped
+
+  normal_ics_dnp3:
+    image: master-honeypot-ics_dnp3:latest
+    container_name: normal_ics_dnp3
+    command: python /app/plc/dnp3_server.py
+    networks:
+      - normal-ot-net
+    environment:
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
 
 volumes:
@@ -880,6 +963,13 @@ networks:
     ipam:
       config:
         - subnet: 192.168.99.0/24
+
+  # Purdue Level 1/2 — Normal Process Simulation Network (Enterprise Real Workstation Target)
+  normal-ot-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.60.0/24
 
   # Shared bridge between Level 2 and Level 3 stacks.
   # Create before first run:  docker network create l2l3-bridge-net --subnet 172.28.0.0/24

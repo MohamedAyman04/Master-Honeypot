@@ -86,7 +86,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         # Create default users if missing (intentional weak credentials for honeypot research)
-        from .models import User
+        from .models import User, SensorReading, SystemSecret
         default_users = [
             ('admin', 'admin', 'admin'),
             ('operator', 'operator123', 'operator'),
@@ -98,8 +98,37 @@ def create_app():
             if not existing_user:
                 db.session.add(User(username=username, password=password, role=role))
 
+        if SensorReading.query.count() == 0:
+            from datetime import datetime, timedelta
+            now = datetime.utcnow()
+            default_sensors = [
+                SensorReading(tag_id='TT-101', sensor_name='CDU-01 Furnace Temp', value=342.6, unit='°C', status='NORMAL', location='Furnace CDU-01', timestamp=now),
+                SensorReading(tag_id='PT-102', sensor_name='Crude Feed Pressure', value=18.4, unit='Bar', status='NORMAL', location='Inlet Manifold', timestamp=now - timedelta(minutes=1)),
+                SensorReading(tag_id='LT-103', sensor_name='Distillation Column Level', value=68.2, unit='%', status='NORMAL', location='Distillation Column', timestamp=now - timedelta(minutes=2)),
+                SensorReading(tag_id='FT-104', sensor_name='Reflux Flow Rate', value=142.8, unit='m³/h', status='NORMAL', location='Reflux Overhead', timestamp=now - timedelta(minutes=3)),
+                SensorReading(tag_id='PT-105', sensor_name='Overhead Condenser Pressure', value=4.2, unit='Bar', status='NORMAL', location='Condenser Header', timestamp=now - timedelta(minutes=4)),
+                SensorReading(tag_id='FT-106', sensor_name='Reboiler Steam Flow', value=89.1, unit='kg/h', status='NORMAL', location='Reboiler Loop', timestamp=now - timedelta(minutes=5)),
+                SensorReading(tag_id='XV-107', sensor_name='Safety Relief Valve Position', value=0.0, unit='%', status='CLOSED', location='ESD Block Valve', timestamp=now - timedelta(minutes=6)),
+                SensorReading(tag_id='SI-901', sensor_name='ESD Emergency Shutdown Interlock', value=1.0, unit='ARMED', status='NORMAL', location='Safety SIS Rack', timestamp=now - timedelta(minutes=7)),
+                SensorReading(tag_id='VT-201', sensor_name='Pump 101-A Bearing Vibration', value=1.8, unit='mm/s', status='NORMAL', location='Pump House A', timestamp=now - timedelta(minutes=8)),
+                SensorReading(tag_id='TT-202', sensor_name='Naphtha Draw Temp', value=124.5, unit='°C', status='NORMAL', location='Draw Tray 14', timestamp=now - timedelta(minutes=9)),
+                SensorReading(tag_id='TT-203', sensor_name='Kerosene Draw Temp', value=188.2, unit='°C', status='NORMAL', location='Draw Tray 28', timestamp=now - timedelta(minutes=10)),
+                SensorReading(tag_id='TT-204', sensor_name='Diesel Draw Temp', value=262.7, unit='°C', status='NORMAL', location='Draw Tray 42', timestamp=now - timedelta(minutes=11)),
+                SensorReading(tag_id='LT-205', sensor_name='Heavy Fuel Oil Level', value=81.3, unit='%', status='NORMAL', location='Bottoms Tankage', timestamp=now - timedelta(minutes=12)),
+            ]
+            db.session.add_all(default_sensors)
+
+        if SystemSecret.query.count() == 0:
+            default_secrets = [
+                SystemSecret(service='OPCUA_SERVER_ROOT', credential='opc.tcp://192.168.99.10:4840/freeopcua/server/', canary_token='CANARY-OPCUA-ADM-9942', notes='Primary Level 1/2 Process Server'),
+                SystemSecret(service='SAFETY_PLC_S7_KEY', credential='S7_Safety_Override#2026!', canary_token='CANARY-S7-PLC-KEY-8812', notes='Emergency Shutdown Logic CPU 414'),
+                SystemSecret(service='MODBUS_RTU_GATEWAY', credential='admin:ModbusCracking2026$$', canary_token='CANARY-MODBUS-GW-7731', notes='Serial Gateway 192.168.99.12'),
+                SystemSecret(service='HISTORIAN_INGESTION_TOKEN', credential='Bearer ht_tok_scada_historian_master_key_2026', canary_token='CANARY-HISTORIAN-AUTH-4419', notes='L2/L3 Bridge Ingestion Key'),
+            ]
+            db.session.add_all(default_secrets)
+
         db.session.commit()
-        print("[*] Default users ensured: admin/admin, operator/operator123, engineer/engineer456")
+        print("[*] Default users & historian telemetry ensured")
         print(f"[*] Workstation profile loaded: component={component_name}, db={db_file_name}")
     
     from .routes import auth_bp
