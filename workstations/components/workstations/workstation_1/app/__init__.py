@@ -21,7 +21,7 @@ def create_app():
     
     @app.before_request
     def log_l3_access():
-        if not request.path.startswith('/static') and not request.path.startswith('/metrics'):
+        if not request.path.startswith('/static') and not request.path.startswith('/metrics') and not request.path.startswith('/api/l2/'):
             session_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
             
             # Detect simulated SQLi

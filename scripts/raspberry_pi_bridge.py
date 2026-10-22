@@ -99,6 +99,8 @@ def main():
     modbus_client = None
     reconnect_delay = 2
     sample_count = 0
+    prev_rpm = None
+    prev_alarm_mask = 0
 
     while True:
         if modbus_client is None or not modbus_client.is_socket_open():
@@ -260,6 +262,71 @@ def main():
                         .field("setpoint", 200.0) \
                         .time(now, WritePrecision.NS)
                     write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=proc_point)
+
+                    # Emit MITRE ATT&CK Correlation & Security Alerts on physical HIL anomalies
+                    if prev_rpm is not None and abs(pump_rpm - prev_rpm) >= 200 and pump_rpm >= 1600:
+                        corr_pt = Point("correlation_logs") \
+                            .tag("event_type", "forced_write") \
+                            .tag("source_ip", current_host) \
+                            .tag("mitre_tactic", "Impair Process Control") \
+                            .tag("mitre_technique_id", "T0855") \
+                            .tag("mitre_technique_name", "Unauthorized Command Message") \
+                            .tag("kill_chain_stage", "Stage 2 - ICS Impact") \
+                            .tag("purdue_level", "Level 1") \
+                            .tag("protocol", "Modbus") \
+                            .field("func_code", 6) \
+                            .field("register", 0) \
+                            .field("value", float(pump_rpm)) \
+                            .field("phys_pressure", pressure) \
+                            .field("phys_flow", flow_rate) \
+                            .time(now, WritePrecision.NS)
+                        alert_pt = Point("security_alerts") \
+                            .tag("event_type", "MODBUS_WRITE") \
+                            .tag("alert_type", "SEMANTIC_INJECTION") \
+                            .tag("service", "ics_rpi_bridge") \
+                            .tag("layer", "Level 1") \
+                            .tag("severity", "CRITICAL") \
+                            .tag("session_id", "master_run_01") \
+                            .tag("source_ip", current_host) \
+                            .tag("mitre_tactic", "Impair Process Control") \
+                            .tag("mitre_technique_id", "T0855") \
+                            .tag("mitre_technique_name", "Unauthorized Command Message") \
+                            .tag("kill_chain_stage", "Stage 2 - ICS Impact") \
+                            .tag("purdue_level", "Level 1") \
+                            .tag("protocol", "Modbus") \
+                            .field("source_ip", current_host) \
+                            .field("narrative", f"[Level 1 HIL] Unauthorized Modbus FC6 Write on Raspberry Pi ({current_host}): Pump RPM forced from {prev_rpm:.0f} to {pump_rpm:.0f} RPM (Pressure: {pressure:.1f} PSI)") \
+                            .field("detail", f"Pump RPM forced to {pump_rpm:.0f} RPM") \
+                            .field("value", 1.0) \
+                            .field("score", 1.0) \
+                            .time(now, WritePrecision.NS)
+                        write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=[corr_pt, alert_pt])
+
+                    if alarm_mask != 0 and prev_alarm_mask == 0:
+                        trip_pt = Point("security_alerts") \
+                            .tag("event_type", "OVER_PRESSURE") \
+                            .tag("alert_type", "OVER_PRESSURE") \
+                            .tag("service", "ics_rpi_bridge") \
+                            .tag("layer", "Level 0") \
+                            .tag("severity", "CRITICAL") \
+                            .tag("session_id", "master_run_01") \
+                            .tag("source_ip", current_host) \
+                            .tag("mitre_tactic", "Impair Process Control") \
+                            .tag("mitre_technique_id", "T0836") \
+                            .tag("mitre_technique_name", "Modify Parameter") \
+                            .tag("kill_chain_stage", "Stage 2 - ICS Impact") \
+                            .tag("purdue_level", "Level 0") \
+                            .tag("protocol", "Modbus") \
+                            .field("source_ip", current_host) \
+                            .field("narrative", f"[Level 0 Physical Safety Trip] High-pressure safety interlock tripped on Raspberry Pi ({current_host}) at {pressure:.1f} PSI (Alarms: {alarm_mask:#04x})") \
+                            .field("detail", f"High pressure safety trip at {pressure:.1f} PSI") \
+                            .field("value", 1.0) \
+                            .field("score", 1.0) \
+                            .time(now, WritePrecision.NS)
+                        write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=trip_pt)
+
+                    prev_rpm = pump_rpm
+                    prev_alarm_mask = alarm_mask
                 except Exception as ex:
                     logger.debug(f"Influx write error: {ex}")
 

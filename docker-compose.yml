@@ -941,14 +941,23 @@ networks:
   # Purdue Level 1/2 — OT process network (physics, PLCs, Redis)
   ot-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.240.10.0/24
 
   # Purdue Level 3.5 — DMZ (external-facing: Modbus, S7, DNP3, SCADA SSH)
   dmz-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.240.20.0/24
 
   # Purdue Level 2 — Monitoring network (historian, ML engine, Grafana)
   monitor-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.240.30.0/24
 
   # Purdue Level 3 — Enterprise network (historian API, SCADA SSH)
   enterprise-net:

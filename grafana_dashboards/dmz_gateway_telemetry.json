@@ -50,6 +50,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "color": {
             "fixedColor": "#ef4444",
             "mode": "fixed"
@@ -73,7 +74,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 1)\n  |> group()\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 1)\n  |> group()\n  |> distinct(column: \"src_ip\")\n  |> count(column: \"_value\")",
           "refId": "A"
         }
       ]
@@ -107,6 +108,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "color": {
             "fixedColor": "#10b981",
             "mode": "fixed"
@@ -130,7 +132,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 0 and r[\"routing_world\"] == \"REAL_INDUSTRIAL\")\n  |> group()\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\" and r[\"_value\"] == 0 and r[\"routing_world\"] == \"REAL_INDUSTRIAL\")\n  |> group()\n  |> distinct(column: \"src_ip\")\n  |> count(column: \"_value\")",
           "refId": "A"
         }
       ]
@@ -164,6 +166,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "color": {
             "fixedColor": "#0284c7",
             "mode": "fixed"
@@ -187,7 +190,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> group()\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_attacker_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> group()\n  |> distinct(column: \"src_ip\")\n  |> count(column: \"_value\")",
           "refId": "A"
         }
       ]

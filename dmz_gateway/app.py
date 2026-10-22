@@ -6,6 +6,7 @@ Implements dynamic two-factor authentication (MFA/OTP) and dual-world routing:
 - Brute-force / anomalous attackers -> Sandboxed Deception Zone (ws_decoy_eng)
 """
 import time
+from collections import defaultdict
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify, Response
 try:
     from . import config
@@ -30,6 +31,18 @@ _stats = {
     "quarantined_sessions": 0,
     "mfa_challenges": 0
 }
+
+# Attacker action history tracking (per IP) to only log when they do something NEW
+_attacker_seen_actions: dict[str, set[str]] = defaultdict(set)
+IGNORE_POLL_SUBPATHS = (
+    'api/l2/metrics',
+    'api/l2/status',
+    'api/l2/alerts',
+    'api/l2/summary',
+    'metrics',
+    'static',
+    'favicon.ico'
+)
 
 def get_client_ip():
     return request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
@@ -361,6 +374,106 @@ def security_questions_challenge():
             error="Incorrect answers. Please try again."
         )
 
+def _log_attacker_action_if_new(ip, user_agent, username, subpath, req):
+    """
+    Logs attacker telemetry to InfluxDB and story_logger ONLY when the attacker
+    performs a distinct NEW action, navigation, or command.
+    Ignores automated background polling (e.g. /api/l2/metrics every 2s) and deduplicates.
+    """
+    clean_subpath = subpath.strip('/')
+    if clean_subpath.startswith('proxy/'):
+        clean_subpath = clean_subpath[6:].strip('/')
+
+    # 1. Ignore automated UI background polls and static resources
+    if any(clean_subpath.startswith(p) for p in IGNORE_POLL_SUBPATHS):
+        return
+
+    method = req.method.upper()
+
+    # 2. Identify action type, MITRE tactic, and user-facing description
+    if 'action/terminal' in clean_subpath and method == 'POST':
+        # Web terminal command execution
+        cmd = req.form.get('command') or ''
+        if not cmd and req.is_json:
+            cmd = (req.get_json(silent=True) or {}).get('command', '')
+        if not cmd:
+            cmd = req.get_data(as_text=True) or ''
+        cmd = cmd.strip()
+        if not cmd:
+            return
+
+        action_key = f"CMD:{cmd}"
+        if "mbtget" in cmd or "modbus" in cmd:
+            tactic = "T0855 (Unauthorized Command Message)"
+            reason = f"Attacker executed OT command: {cmd[:70]}"
+            sev = "critical"
+        elif any(k in cmd for k in ("nmap", "ping", "nc ", "netstat", "arp")):
+            tactic = "T0846 (Network Service Discovery)"
+            reason = f"Attacker executed scan: {cmd[:70]}"
+            sev = "warning"
+        elif any(k in cmd for k in ("cat ", "tail ", "head ", "grep ", "find ", "/etc/passwd", "/etc/shadow")):
+            tactic = "T0802 (Automated Collection)"
+            reason = f"Attacker inspected system configuration: {cmd[:70]}"
+            sev = "warning"
+        elif "ssh " in cmd or "scp " in cmd:
+            tactic = "T0866 (Exploitation of Remote Services)"
+            reason = f"Attacker attempted lateral pivot: {cmd[:70]}"
+            sev = "high"
+        else:
+            tactic = "T1059 (Command and Scripting Interpreter)"
+            reason = f"Attacker executed shell command: {cmd[:70]}"
+            sev = "info"
+
+    elif 'control' in clean_subpath or (clean_subpath.startswith('action/') and method == 'POST'):
+        action_key = f"CONTROL:{clean_subpath}"
+        tactic = "T0855 (Unauthorized Command Message)"
+        reason = f"Attacker issued process control operation on {clean_subpath}"
+        sev = "critical"
+
+    elif method == 'GET':
+        base_nav = clean_subpath.split('/')[0] if clean_subpath else 'dashboard'
+        action_key = f"NAV:{base_nav}"
+        tactic = "T1082 (System Discovery in Honeypot)"
+        reason = f"Attacker explored interface section: {base_nav}"
+        sev = "info"
+
+    else:
+        action_key = f"{method}:{clean_subpath}"
+        tactic = "T1082 (System Discovery in Honeypot)"
+        reason = f"Attacker sent {method} request to {clean_subpath}"
+        sev = "info"
+
+    # 3. Deduplicate: only log if this is a NEW action for this attacker IP
+    if action_key in _attacker_seen_actions[ip]:
+        return
+
+    _attacker_seen_actions[ip].add(action_key)
+
+    # 4. Log to InfluxDB telemetry (powers Grafana audit log and MITRE pie chart)
+    telemetry_logger.log_routing_telemetry(
+        src_ip=ip,
+        user_agent=user_agent,
+        username=username,
+        routing_world="SANDBOX_DECEPTION",
+        actor_type="attacker",
+        tactic=tactic,
+        reason=reason
+    )
+
+    # 5. Log to centralized story_logger for general logs.jsonl narrative
+    telemetry_logger.log_event_to_story(
+        event_type="attacker_action_observed",
+        message=reason,
+        severity=sev,
+        details={
+            "ip": ip,
+            "username": username,
+            "action": action_key,
+            "tactic": tactic,
+            "subpath": clean_subpath
+        }
+    )
+
 @app.route('/dashboard', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/proxy/', defaults={'subpath': 'dashboard'}, methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/proxy/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -380,12 +493,16 @@ def proxy_root(subpath='dashboard'):
     actor_type = session.get('actor_type', 'attacker')
     ip = get_client_ip()
 
+    clean_subpath = subpath
+    if clean_subpath.startswith('proxy/'):
+        clean_subpath = clean_subpath[6:]
+
     # Deep Inspection of HTTP path, query string, and data for Command/SQL Injections
     # Note: Authenticated legitimate corporate users on REAL_INDUSTRIAL communicating with their
     # own engineering workstation terminal/tools must stay on the legitimate production workstation.
     if routing_world != 'REAL_INDUSTRIAL':
         qs = request.query_string.decode('utf-8', errors='ignore')
-        payload_to_check = f"{subpath}?{qs}"
+        payload_to_check = f"{clean_subpath}?{qs}"
         try:
             raw_body = request.get_data(as_text=True)
             if raw_body:
@@ -427,7 +544,6 @@ def proxy_root(subpath='dashboard'):
                 reason=exp_reason
             )
 
-
     if routing_world == 'REAL_INDUSTRIAL':
         if session.get('role') == 'operator':
             target_url = config.REAL_OPS_WORKSTATION_URL
@@ -441,20 +557,9 @@ def proxy_root(subpath='dashboard'):
             target_url = config.DECOY_MAIN_WORKSTATION_URL
         else:
             target_url = config.DECOY_WORKSTATION_URL
-        # Telemetry capture of attacker action in the sandbox
-        telemetry_logger.log_routing_telemetry(
-            src_ip=ip,
-            user_agent=request.headers.get('User-Agent', ''),
-            username=session.get('user', 'attacker'),
-            routing_world="SANDBOX_DECEPTION",
-            actor_type="attacker",
-            tactic="T1082 (System Discovery in Honeypot)",
-            reason=f"Action on {subpath}"
-        )
 
-    clean_subpath = subpath
-    if clean_subpath.startswith('proxy/'):
-        clean_subpath = clean_subpath[6:]
+        # Telemetry capture of attacker action: only log when they do something NEW
+        _log_attacker_action_if_new(ip, request.headers.get('User-Agent', ''), session.get('user', 'attacker'), clean_subpath, request)
 
     return router.forward_request(
         target_base_url=target_url,

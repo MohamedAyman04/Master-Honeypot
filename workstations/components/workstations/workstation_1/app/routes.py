@@ -67,7 +67,7 @@ def track_request_in():
             session['user'] = gw_user
             session['role'] = request.headers.get('X-Gateway-Role', 'operator')
 
-    if request.path.startswith('/static') or request.path == '/activity':
+    if request.path.startswith('/static') or request.path == '/activity' or request.path.startswith('/api/l2/'):
         return
 
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
@@ -80,7 +80,7 @@ def track_request_in():
 
 @auth_bp.after_app_request
 def track_request_out(response):
-    if request.path.startswith('/static') or request.path == '/activity':
+    if request.path.startswith('/static') or request.path == '/activity' or request.path.startswith('/api/l2/'):
         return response
 
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
@@ -343,6 +343,7 @@ def terminal_exec():
         raw_host = os.getenv("HOSTNAME", "ws-eng-02")
         hostname = "ws-eng-02" if "decoy" in raw_host.lower() else raw_host
         device_mac = os.getenv("WORKSTATION_DEVICE_MAC", "02:42:c0:a8:63:15")
+        device_ip = os.getenv("WORKSTATION_DEVICE_IP", "192.168.99.21")
         err = ""
 
         if cmd_clean == "ls":
@@ -460,19 +461,92 @@ def terminal_exec():
                 "shift_operator:x:1002:1002:Central Control Room Shift Operator:/home/shift_operator:/bin/bash\n"
                 "historian_svc:x:1003:1003:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
             )
-        elif "mbtget" in cmd_lower or "modbus" in cmd_lower:
-            out = "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12\n"
-        elif "nmap" in cmd_lower or "ping" in cmd_lower:
+        elif "/etc/hosts" in cmd_lower or "hosts" in cmd_lower:
             out = (
-                "Starting Nmap 7.80 ( https://nmap.org )\n"
-                "Nmap scan report for plc-safety-01 (192.168.99.10)\n"
-                "Host is up (0.00041s latency).\n"
-                "PORT    STATE SERVICE\n"
-                "102/tcp open  iso-tsap (Siemens S7)\n"
-                "502/tcp open  mbap (Modbus TCP)\n"
+                "127.0.0.1       localhost\n"
+                f"127.0.1.1       {hostname}.arabco.local {hostname}\n\n"
+                "# ARABCO Industrial Automation - Level 2 / Level 1 Field Controllers\n"
+                "192.168.99.10   plc-safety-01.arabco.local      # Siemens S7-1500 Safety Controller\n"
+                "192.168.99.12   plc-fccu-modbus.arabco.local    # Modbus TCP Crude Refining Unit (Virtual Decoy)\n"
+                "172.20.10.8     plc-codesys-hil.arabco.local    # Raspberry Pi 4B CODESYS SoftPLC (Physical HIL)\n"
+                "192.168.99.50   historian.arabco.local          # Plant Data Historian Repository\n"
             )
+        elif "netstat" in cmd_lower:
+            out = (
+                "Active Internet connections (only servers)\n"
+                "Proto Recv-Q Send-Q Local Address           Foreign Address         State\n"
+                "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN\n"
+                "tcp        0      0 127.0.0.1:5001          0.0.0.0:*               LISTEN\n"
+                f"tcp        0      0 {device_ip}:44818       0.0.0.0:*               LISTEN\n"
+                "udp        0      0 0.0.0.0:68              0.0.0.0:*\n"
+            )
+        elif "arp" in cmd_lower:
+            out = (
+                "? (10.240.20.1) at 02:42:25:a1:00:01 [ether] on eth0\n"
+                "? (192.168.99.10) at 00:1c:06:12:45:aa [ether] on eth0\n"
+                "? (192.168.99.12) at 00:80:f4:33:91:bc [ether] on eth0\n"
+                "? (172.20.10.8) at b8:27:eb:d4:1a:09 [ether] on eth0\n"
+                "? (192.168.99.50) at 02:42:c0:a8:63:32 [ether] on eth0\n"
+            )
+        elif "route" in cmd_lower or "ip route" in cmd_lower:
+            out = (
+                "default via 192.168.99.1 dev eth0\n"
+                f"192.168.99.0/24 dev eth0 proto kernel scope link src {device_ip}\n"
+                "172.20.10.0/24 via 192.168.99.1 dev eth0\n"
+            )
+        elif cmd_lower.startswith("mbtget") or "mbtget " in cmd_lower:
+            import re
+            target_match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", cmd_clean)
+            target_ip = target_match.group(1) if target_match else "192.168.99.12"
+            if "-w" in cmd_lower:
+                out = f"Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to {target_ip}\nModbus Response: ExceptionCode=0 (SUCCESS), TransID=4921, UnitID=1\n"
+            else:
+                out = f"Values: [1200, 45, 122, 0, 381] - Holding registers read from {target_ip}\nModbus Response: ExceptionCode=0 (SUCCESS), TransID=4920, UnitID=1\n"
+        elif "nmap" in cmd_lower or "ping" in cmd_lower:
+            import re
+            target_match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", cmd_clean)
+            target_ip = target_match.group(1) if target_match else "192.168.99.10"
+            if "172.20.10.8" in target_ip or "codesys" in cmd_lower:
+                out = (
+                    "Starting Nmap 7.80 ( https://nmap.org )\n"
+                    "Nmap scan report for plc-codesys-hil (172.20.10.8)\n"
+                    "Host is up (0.0012s latency).\n"
+                    "PORT      STATE SERVICE\n"
+                    "102/tcp   open  iso-tsap (Siemens S7)\n"
+                    "502/tcp   open  mbap (Modbus TCP)\n"
+                    "4840/tcp  open  opcua (OPC Unified Architecture)\n"
+                    "8080/tcp  open  http-proxy (CODESYS WebVisu HMI)\n"
+                    "20000/tcp open  dnp3\n"
+                )
+            else:
+                out = (
+                    "Starting Nmap 7.80 ( https://nmap.org )\n"
+                    f"Nmap scan report for plc-target ({target_ip})\n"
+                    "Host is up (0.00041s latency).\n"
+                    "PORT     STATE SERVICE\n"
+                    "102/tcp  open  iso-tsap (Siemens S7)\n"
+                    "502/tcp  open  mbap (Modbus TCP)\n"
+                    "4840/tcp open  opcua (OPC Unified Architecture)\n"
+                )
         else:
-            out = f"Command executed: {cmd_clean}\n"
+            # Fallback to realistic container execution
+            try:
+                import subprocess
+                proc = subprocess.run(
+                    cmd_clean,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=3.0
+                )
+                out = proc.stdout
+                err = proc.stderr
+                if not out and not err:
+                    out = f"[Command exited with code {proc.returncode}]\n"
+            except subprocess.TimeoutExpired:
+                err = f"Command execution timed out (>3s): {cmd_clean[:40]}\n"
+            except Exception as exc:
+                err = f"Execution error: {str(exc)}\n"
 
         return jsonify({'output': out, 'error': err})
 
@@ -481,7 +555,7 @@ def terminal_exec():
     cmd_lower = cmd_clean.lower()
     
     # Industrial SCADA command simulations
-    if "mbtget" in cmd_lower or "modbus" in cmd_lower:
+    if cmd_lower.startswith("mbtget") or "mbtget " in cmd_lower:
         out = (
             "Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to 192.168.99.12\n"
             "Modbus Response: ExceptionCode=0 (SUCCESS), TransID=4921, UnitID=1"
@@ -694,9 +768,6 @@ def l2_metrics():
     Decoy Honeypot: Returns live physical process telemetry and RPi HIL reactions under attack.
     Real Workstation: Returns steady-state healthy industrial process telemetry.
     """
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-    log_activity('L2_BRIDGE', f"IP={ip_address} || ACTION=GET_METRICS || TARGET=L2_PHYSICS_API")
-
     if os.getenv("IS_DECOY", "false").lower() == "true":
         # Sandboxed Honeypot Zone: Dynamic physics engine reacting to attacks (masked for high fidelity)
         data = l2_bridge.get_physics_metrics()

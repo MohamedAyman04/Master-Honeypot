@@ -445,11 +445,11 @@ def lookup(event_type: str) -> dict[str, str]:
     Return the ATT\u0026CK metadata dict for *event_type*.
     Falls back to _UNKNOWN if the key is not in the table.
     The returned dict is a shallow copy — safe to mutate.
-    All events are tagged Purdue Level 2 for this honeypot deployment.
     """
     key = event_type.lower() if isinstance(event_type, str) else event_type
     result = dict(TECHNIQUE_MAP.get(key, TECHNIQUE_MAP.get(event_type, _UNKNOWN)))
-    result["purdue_level"] = "Level 2"
+    if not result.get("purdue_level") or result["purdue_level"] == "Unknown":
+        result["purdue_level"] = "Level 2"
     return result
 
 
