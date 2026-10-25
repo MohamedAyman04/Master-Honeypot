@@ -366,8 +366,20 @@ def terminal_exec():
                 from components.workstations.workstation_1.app import dynamic_lures
 
         # 1. Directory Listing (Morphed dynamically based on active attacker persona)
-        if cmd_clean in ("ls", "dir") or cmd_lower in ("ls -l", "ls -la", "dir /w", "ll"):
-            out = dynamic_lures.get_directory_listing(persona, decoy_role)
+        cmd_tokens = cmd_clean.split()
+        cmd_base = cmd_tokens[0].lower() if cmd_tokens else ""
+        if cmd_base in ("ls", "dir", "ll"):
+            flags = "".join(t for t in cmd_tokens[1:] if t.startswith("-"))
+            is_long = "l" in flags or cmd_base == "ll"
+            show_all = "a" in flags or "all" in flags
+            one_per_line = "1" in flags
+            out = dynamic_lures.get_directory_listing(
+                persona,
+                role=decoy_role,
+                is_long=is_long,
+                show_all=show_all,
+                one_per_line=one_per_line
+            )
             return jsonify({'output': out, 'error': ''})
 
         # 2. File Reading & Honeytoken Inspection

@@ -21,47 +21,115 @@ PI_HOST = os.getenv("RPI_ACTIVE_HOST", "192.168.1.16")
 PI_MODBUS_PORT = int(os.getenv("RPI_MODBUS_PORT", 502))
 FAKE_PLC_HOST = os.getenv("FAKE_PLC_HOST", "192.168.99.15")
 
-def get_directory_listing(persona: str, role: str = "engineer") -> str:
-    """Generates adaptive directory contents based on active attacker persona."""
-    if persona == "CREDENTIAL_VAULT_HUNTER":
-        return (
-            "total 412\n"
-            "-rw------- 1 eng_operator scada_eng   4096 Sep 19 14:03 SCADA_Admin_Vault_2026.kdbx\n"
-            "-rw-r--r-- 1 eng_operator scada_eng    612 Oct 02 08:15 rpi_codesys_access.conf\n"
-            "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
-            "-rw------- 1 eng_operator scada_eng   1675 Sep 15 10:20 id_rsa_cdu_gateway\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
-            "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups\n"
-        )
-    elif persona == "PROCESS_SABOTEUR":
-        return (
-            "total 388\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  84112 Sep 15 11:45 Emergency_Shutdown_Matrix_CDU01.pdf\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  18490 Sep 21 09:30 HMI_Alarm_Bypass_Matrix.xlsx\n"
-            "-rw-r--r-- 1 eng_operator scada_eng   4210 Oct 01 11:20 Safety_Interlock_Override_Codes.csv\n"
-            "-rw-r--r-- 1 eng_operator scada_eng   3140 Sep 22 16:05 Shift_Handover_Log_CCR_2026.txt\n"
-            "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
-            "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 22 00:00 hmi_trends\n"
-        )
-    elif persona == "PLC_FIRMWARE_EXPLOITER":
-        return (
-            "total 520\n"
-            "-rw-r--r-- 1 eng_operator scada_eng 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.project\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  98120 Sep 18 10:45 Siemens_CPU414_Safety_OB1.s7p\n"
-            "-rw-r--r-- 1 eng_operator scada_eng   1024 Sep 28 14:10 CODESYS_V35_Runtime_Diagnostics.log\n"
-            "-rw-r--r-- 1 eng_operator scada_eng    612 Oct 02 08:15 rpi_codesys_access.conf\n"
-            "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups\n"
-        )
-    else:  # NETWORK_TOPOLOGY_SCOUT or default
-        return (
-            "total 384\n"
-            "-rw-r--r-- 1 eng_operator scada_eng 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.project\n"
-            "-rw------- 1 eng_operator scada_eng   4096 Sep 19 14:03 SCADA_Admin_Vault_2026.kdbx\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  84112 Sep 15 11:45 Emergency_Shutdown_Matrix_CDU01.pdf\n"
-            "-rw-r--r-- 1 eng_operator scada_eng  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
-            "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
-            "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups\n"
-        )
+DECOY_DIRECTORY_DATA = {
+    "CREDENTIAL_VAULT_HUNTER": {
+        "total": 412,
+        "files": [
+            ("-rw-------", "1", "eng_operator", "scada_eng", "4096", "Sep 19 14:03", "SCADA_Admin_Vault_2026.kdbx"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "612", "Oct 02 08:15", "rpi_codesys_access.conf"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "528", "Sep 20 18:22", "historian_connection.conf"),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "1675", "Sep 15 10:20", "id_rsa_cdu_gateway"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "28410", "Sep 20 08:30", "plant_topology_map.vsdx"),
+            ("drwxr-xr-x", "2", "eng_operator", "scada_eng", "4096", "Sep 21 00:00", "backups"),
+        ],
+        "hidden": [
+            ("drwxr-xr-x", "5", "eng_operator", "scada_eng", "4096", "Oct 22 10:15", "."),
+            ("drwxr-xr-x", "3", "root", "root", "4096", "Sep 15 09:00", ".."),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "842", "Oct 20 16:30", ".bash_history"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "220", "Sep 15 09:00", ".bash_logout"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "3771", "Sep 15 09:00", ".bashrc"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "807", "Sep 15 09:00", ".profile"),
+        ]
+    },
+    "PROCESS_SABOTEUR": {
+        "total": 388,
+        "files": [
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "84112", "Sep 15 11:45", "Emergency_Shutdown_Matrix_CDU01.pdf"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "18490", "Sep 21 09:30", "HMI_Alarm_Bypass_Matrix.xlsx"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "4210", "Oct 01 11:20", "Safety_Interlock_Override_Codes.csv"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "3140", "Sep 22 16:05", "Shift_Handover_Log_CCR_2026.txt"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "528", "Sep 20 18:22", "historian_connection.conf"),
+            ("drwxr-xr-x", "2", "eng_operator", "scada_eng", "4096", "Sep 22 00:00", "hmi_trends"),
+        ],
+        "hidden": [
+            ("drwxr-xr-x", "5", "eng_operator", "scada_eng", "4096", "Oct 22 10:15", "."),
+            ("drwxr-xr-x", "3", "root", "root", "4096", "Sep 15 09:00", ".."),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "842", "Oct 20 16:30", ".bash_history"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "220", "Sep 15 09:00", ".bash_logout"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "3771", "Sep 15 09:00", ".bashrc"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "807", "Sep 15 09:00", ".profile"),
+        ]
+    },
+    "PLC_FIRMWARE_EXPLOITER": {
+        "total": 520,
+        "files": [
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "248920", "Sep 18 09:12", "Refinery_PLC_Logic_Backup_2026.project"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "98120", "Sep 18 10:45", "Siemens_CPU414_Safety_OB1.s7p"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "1024", "Sep 28 14:10", "CODESYS_V35_Runtime_Diagnostics.log"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "612", "Oct 02 08:15", "rpi_codesys_access.conf"),
+            ("drwxr-xr-x", "2", "eng_operator", "scada_eng", "4096", "Sep 21 00:00", "backups"),
+        ],
+        "hidden": [
+            ("drwxr-xr-x", "5", "eng_operator", "scada_eng", "4096", "Oct 22 10:15", "."),
+            ("drwxr-xr-x", "3", "root", "root", "4096", "Sep 15 09:00", ".."),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "842", "Oct 20 16:30", ".bash_history"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "220", "Sep 15 09:00", ".bash_logout"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "3771", "Sep 15 09:00", ".bashrc"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "807", "Sep 15 09:00", ".profile"),
+        ]
+    },
+    "NETWORK_TOPOLOGY_SCOUT": {
+        "total": 384,
+        "files": [
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "248920", "Sep 18 09:12", "Refinery_PLC_Logic_Backup_2026.project"),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "4096", "Sep 19 14:03", "SCADA_Admin_Vault_2026.kdbx"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "84112", "Sep 15 11:45", "Emergency_Shutdown_Matrix_CDU01.pdf"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "28410", "Sep 20 08:30", "plant_topology_map.vsdx"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "528", "Sep 20 18:22", "historian_connection.conf"),
+            ("drwxr-xr-x", "2", "eng_operator", "scada_eng", "4096", "Sep 21 00:00", "backups"),
+        ],
+        "hidden": [
+            ("drwxr-xr-x", "5", "eng_operator", "scada_eng", "4096", "Oct 22 10:15", "."),
+            ("drwxr-xr-x", "3", "root", "root", "4096", "Sep 15 09:00", ".."),
+            ("-rw-------", "1", "eng_operator", "scada_eng", "842", "Oct 20 16:30", ".bash_history"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "220", "Sep 15 09:00", ".bash_logout"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "3771", "Sep 15 09:00", ".bashrc"),
+            ("-rw-r--r--", "1", "eng_operator", "scada_eng", "807", "Sep 15 09:00", ".profile"),
+        ]
+    }
+}
+
+def get_directory_listing(
+    persona: str,
+    role: str = "engineer",
+    is_long: bool = False,
+    show_all: bool = False,
+    one_per_line: bool = False
+) -> str:
+    """Generates adaptive directory contents based on active attacker persona and command flags.
+    
+    - When is_long is False (plain 'ls' or 'dir'), outputs only file/dir names separated by spaces.
+    - When is_long is True ('ls -l', 'ls -la', 'll'), outputs full permissions, owner, size, and date.
+    - When show_all is True ('ls -a', 'ls -la'), includes hidden dotfiles (., .., .bash_history).
+    """
+    tmpl = DECOY_DIRECTORY_DATA.get(persona, DECOY_DIRECTORY_DATA["NETWORK_TOPOLOGY_SCOUT"])
+    
+    entries = []
+    if show_all:
+        entries.extend(tmpl["hidden"])
+    entries.extend(tmpl["files"])
+
+    if is_long:
+        lines = [f"total {tmpl['total']}"]
+        for perm, links, user, grp, size, dt, name in entries:
+            lines.append(f"{perm} {links} {user} {grp} {size:>6} {dt} {name}")
+        return "\n".join(lines) + "\n"
+    elif one_per_line:
+        names = [e[-1] for e in entries]
+        return "\n".join(names) + "\n"
+    else:
+        names = [e[-1] for e in entries]
+        return "  ".join(names) + "\n"
 
 def get_file_content(filename: str, username: str = "eng_operator") -> str:
     """Returns adaptive realistic contents with canary tracking tokens."""
