@@ -467,11 +467,11 @@ def terminal_exec():
             )
         elif "arp" in cmd_lower:
             out = (
-                "? (192.168.1.16) at d8:3a:dd:4c:91:08 [ether] on eth0   # Raspberry Pi 4B CODESYS HIL\n"
-                "? (192.168.99.15) at 02:42:c0:a8:63:0f [ether] on eth0  # Standby Fake PLC Tarpit\n"
+                "? (192.168.1.16) at d8:3a:dd:4c:91:08 [ether] on eth0   # Scada Server\n"
+                "? (192.168.99.15) at 02:42:c0:a8:63:0f [ether] on eth0  # Standby Controller\n"
                 "? (192.168.99.10) at 00:1c:06:12:45:aa [ether] on eth0  # Siemens S7-1500 Safety PLC\n"
                 "? (192.168.99.12) at 00:80:f4:33:91:bc [ether] on eth0  # Modbus FCCU Controller\n"
-                "? (172.20.10.8) at b8:27:eb:d4:1a:09 [ether] on eth0    # Secondary HIL Link\n"
+                "? (172.20.10.8) at b8:27:eb:d4:1a:09 [ether] on eth0    # Secondary Controller Link\n"
                 "? (192.168.99.50) at 02:42:c0:a8:63:32 [ether] on eth0  # Historian Ingest\n"
             )
         elif "route" in cmd_lower or "ip route" in cmd_lower:
