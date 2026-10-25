@@ -46,7 +46,7 @@ def parse_candidate_hosts():
             item = item.strip()
             if item and item not in candidates:
                 candidates.append(item)
-    for default_ip in ["172.20.10.8", "192.168.1.8"]:
+    for default_ip in ["192.168.1.16", "172.20.10.8", "192.168.1.8"]:
         if default_ip not in candidates:
             candidates.append(default_ip)
     return candidates

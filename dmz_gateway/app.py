@@ -479,12 +479,18 @@ def _log_attacker_action_if_new(ip, user_agent, username, subpath, req):
 @app.route('/proxy/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @app.route('/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def proxy_root(subpath='dashboard'):
-    if subpath in ('login', 'mfa', 'status', 'logout', 'mfa/security-questions', 'security-questions'):
+    if subpath in ('login', 'mfa', 'status', 'logout', 'mfa/security-questions', 'security-questions', 'api/status') or subpath.startswith('api/deception'):
         if subpath == 'login': return redirect(url_for('login'))
         if subpath == 'mfa': return redirect(url_for('mfa_challenge'))
         if subpath in ('mfa/security-questions', 'security-questions'): return redirect(url_for('security_questions_challenge'))
         if subpath == 'status': return redirect(url_for('gateway_status'))
+        if subpath == 'api/status': return gateway_status_api()
         if subpath == 'logout': return redirect(url_for('logout'))
+        if subpath == 'api/deception/profiles': return deception_all_profiles()
+        if subpath.startswith('api/deception/profile'):
+            parts = subpath.split('/')
+            target_ip = parts[3] if len(parts) > 3 else None
+            return deception_profile(target_ip)
 
     if not session.get('is_authenticated'):
         return redirect(url_for('login'))
@@ -509,6 +515,29 @@ def proxy_root(subpath='dashboard'):
                 payload_to_check += f" {raw_body[:500]}"
         except Exception:
             pass
+
+        # Attacker Intent Profiling on Gateway for intercepted terminal commands
+        if 'terminal' in clean_subpath:
+            try:
+                import json as _json
+                cmd_data = {}
+                if raw_body:
+                    try:
+                        cmd_data = _json.loads(raw_body)
+                    except Exception:
+                        pass
+                if not cmd_data:
+                    cmd_data = request.get_json(force=True, silent=True) or {}
+                cmd_str = cmd_data.get('command', '') or request.form.get('command', '')
+                if cmd_str:
+                    try:
+                        from .adaptive_engine import profiler
+                    except (ImportError, ValueError):
+                        import adaptive_engine
+                        profiler = adaptive_engine.profiler
+                    profiler.record_command(ip, cmd_str, session_id=session.get('user'))
+            except Exception:
+                pass
 
         is_exploit, exp_reason, exp_tactic = anomaly_detector.inspect_generic_payload(payload_to_check)
         if is_exploit:
@@ -589,6 +618,55 @@ def gateway_status_api():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/api/deception/profile', methods=['GET'])
+@app.route('/api/deception/profile/<path:target>', methods=['GET'])
+def deception_profile(target=None):
+    """Exposes real-time active deception profile and intent scores."""
+    try:
+        from .adaptive_engine import profiler
+    except (ImportError, ValueError):
+        import adaptive_engine
+        profiler = adaptive_engine.profiler
+
+    key = target or session.get('user') or get_client_ip()
+    profile = profiler._profiles.get(key)
+    if not profile:
+        for p in profiler._profiles.values():
+            if p.ip == key or p.session_id == key:
+                profile = p
+                break
+    if not profile and profiler._profiles:
+        profile = max(profiler._profiles.values(), key=lambda p: p.command_count)
+    if not profile:
+        profile = profiler.get_profile(get_client_ip())
+
+    return jsonify({
+        "status": "ok",
+        "profile": profile.to_dict(),
+        "hardware_hil": {
+            "rpi_host": "192.168.1.16",
+            "modbus_tcp": "192.168.1.16:502",
+            "opcua_tcp": "opc.tcp://192.168.1.16:4840/codesys/server/",
+            "hmi_web": "http://192.168.1.16:8080",
+            "fake_plc_tarpit": "192.168.99.15:502"
+        }
+    })
+
+@app.route('/api/deception/profiles', methods=['GET'])
+def deception_all_profiles():
+    """Returns all actively tracked adversary deception profiles."""
+    try:
+        from .adaptive_engine import profiler
+    except (ImportError, ValueError):
+        import adaptive_engine
+        profiler = adaptive_engine.profiler
+
+    return jsonify({
+        "status": "ok",
+        "count": len(profiler._profiles),
+        "profiles": {k: p.to_dict() for k, p in profiler._profiles.items()}
+    })
 
 if __name__ == '__main__':
     print(f"[*] Starting DMZ Secure OT Access Gateway on port {config.GATEWAY_PORT}")

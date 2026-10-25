@@ -303,12 +303,14 @@ def config_info():
             },
             "level_2_control": {
                 "scada_workstation": f"ssh://{SCADA_SSH_HOST}:{SCADA_SSH_PORT}  (operator access)",
-                "hmi":               "http://ics_hmi:8060",
+                "hmi":               "http://192.168.1.16:8080  (CODESYS Industrial HMI)",
             },
             "level_2_ot": {
-                "modbus_plc":  "plc_simulator:502   (Modbus TCP — SIMATIC gateway)",
-                "s7_plc":      "ics_s7_plc:102      (Siemens S7-300)",
-                "dnp3_rtu":    "ics_dnp3:20000      (DNP3 outstation)",
+                "modbus_plc":       "192.168.1.16:502    (Physical CODESYS SoftPLC)",
+                "fake_modbus_plc":  "192.168.99.15:502   (Modbus Deception Tarpit)",
+                "s7_plc":           "ics_s7_plc:102      (Siemens S7-300)",
+                "dnp3_rtu":         "ics_dnp3:20000      (DNP3 outstation)",
+                "opcua_server":     "192.168.1.16:4840   (CODESYS OPC-UA)",
             },
         },
         "data_flows": [

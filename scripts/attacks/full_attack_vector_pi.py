@@ -30,6 +30,7 @@ Phases:
      - Validates InfluxDB, Story Logger (general logs.jsonl), and Grafana attack mapping.
 """
 
+import os
 import sys
 import time
 import json
@@ -39,12 +40,28 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-PI_HOST = "172.20.10.8"
+def _resolve_pi_host():
+    for host in [os.getenv("RPI_HOST", ""), "192.168.1.16", "172.20.10.8", "192.168.1.8"]:
+        for h in host.split(","):
+            h = h.strip()
+            if not h:
+                continue
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(1.2)
+                s.connect((h, 502))
+                s.close()
+                return h
+            except Exception:
+                pass
+    return "192.168.1.16"
+
+PI_HOST = _resolve_pi_host()
 PI_MODBUS_PORT = 502
-PI_WEBVISU_PORT = 8080
-GATEWAY_URL = "http://localhost:8088"
-INFLUX_URL = "http://localhost:8086"
-STORY_LOGGER_URL = "http://localhost:8600"
+PI_HMI_PORT = 8080
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8088")
+INFLUX_URL = os.getenv("INFLUX_URL", "http://localhost:8086")
+STORY_LOGGER_URL = os.getenv("STORY_LOGGER_URL", "http://localhost:8600")
 
 def log_banner(msg):
     print("\n" + "=" * 76)

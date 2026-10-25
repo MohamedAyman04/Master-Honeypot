@@ -31,7 +31,7 @@ def resolve_default_host():
             h = h.strip()
             if h and h not in candidates:
                 candidates.append(h)
-    for default_ip in ["172.20.10.8", "192.168.1.8"]:
+    for default_ip in ["192.168.1.16", "172.20.10.8", "192.168.1.8"]:
         if default_ip not in candidates:
             candidates.append(default_ip)
     for host in candidates:

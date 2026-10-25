@@ -89,8 +89,10 @@ services:
       context: ./fake_plc
     container_name: fake_plc_sim
     networks:
-      - dmz-net
-      - ot-net
+      dmz-net: {}
+      ot-net: {}
+      sandbox-net:
+        ipv4_address: 192.168.99.15
     ports:
       - "503:502"
     restart: unless-stopped
@@ -158,33 +160,6 @@ services:
       - unified-logs:/var/log/honeynet # unified log volume shared across services
     restart: unless-stopped
 
-  # ── HMI Web Dashboard (Purdue Level 2) ────────────────────────────────────────
-  hmi:
-    build:
-      context: ./hmi
-    container_name: ics_hmi
-    depends_on:
-      plc_simulator:
-        condition: service_started
-    networks:
-      - ot-net
-      - monitor-net
-    ports:
-      - "8060:8060"
-    env_file: .env
-    environment:
-      - PLC_IP=${PLC_IP}
-      - REDIS_HOST=${REDIS_HOST}
-      - INFLUX_URL=${INFLUX_URL}
-      - INFLUX_TOKEN=${INFLUX_TOKEN}
-      - INFLUX_ORG=${INFLUX_ORG}
-      - INFLUX_BUCKET=${INFLUX_BUCKET}
-      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
-    restart: unless-stopped
-    volumes:
-      - ./hmi:/app:ro
-    command: python hmi_app.py
-
   # ── Historian Bridge (Modbus → InfluxDB) ─────────────────────────────────────
   historian_bridge:
     build:
@@ -228,7 +203,7 @@ services:
       - sandbox-net
     env_file: .env
     environment:
-      - RPI_HOST=${RPI_HOST:-172.20.10.8,192.168.1.8}
+      - RPI_HOST=${RPI_HOST:-192.168.1.16,172.20.10.8,192.168.1.8}
       - REDIS_HOST=redis
       - INFLUX_URL=http://historian:8086
       - INFLUX_TOKEN=${INFLUX_TOKEN}

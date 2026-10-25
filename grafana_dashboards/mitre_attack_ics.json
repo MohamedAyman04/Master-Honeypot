@@ -745,7 +745,11 @@
     "templating": {
         "list": [
             {
-                "current": {},
+                "current": {
+                    "selected": true,
+                    "text": "InfluxDB L2",
+                    "value": "influxdb-l2"
+                },
                 "hide": 0,
                 "includeAll": false,
                 "name": "DS_INFLUXDB",

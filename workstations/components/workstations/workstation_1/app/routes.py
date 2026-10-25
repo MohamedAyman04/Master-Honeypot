@@ -252,7 +252,7 @@ def terminal_exec():
         return jsonify({'error': 'unauthorized'}), 401
 
     data = request.get_json(force=True, silent=True) or {}
-    cmd = data.get('command', '')
+    cmd = data.get('command', '') or request.form.get('command', '')
     if not cmd:
         return jsonify({'error': 'No command provided'})
 
@@ -346,103 +346,93 @@ def terminal_exec():
         device_ip = os.getenv("WORKSTATION_DEVICE_IP", "192.168.99.21")
         err = ""
 
-        if cmd_clean == "ls":
-            if decoy_role == "operator":
-                out = "Emergency_Shutdown_Procedure_SOP_Rev4.pdf  HMI_Alarm_Bypass_Matrix.xlsx  Shift_Handover_Log_CCR_2026.txt  historian_connection.conf  hmi_trends  plant_topology_map.vsdx\n"
-            else:
-                out = "Refinery_PLC_Logic_Backup_2026.s7p  SCADA_Admin_Master_Keys.kdbx  Safety_Interlock_Bypass_Codes.pdf  backups  historian_connection.conf  plant_topology_map.vsdx\n"
-        elif cmd_lower in ("ls -l", "ls -la", "dir"):
-            if decoy_role == "operator":
-                out = (
-                    "total 296\n"
-                    "-rw-r--r-- 1 shift_operator scada_ops  48120 Sep 22 14:10 Emergency_Shutdown_Procedure_SOP_Rev4.pdf\n"
-                    "-rw-r--r-- 1 shift_operator scada_ops   3140 Sep 22 16:05 Shift_Handover_Log_CCR_2026.txt\n"
-                    "-rw-r--r-- 1 shift_operator scada_ops  18490 Sep 21 09:30 HMI_Alarm_Bypass_Matrix.xlsx\n"
-                    "-rw-r--r-- 1 shift_operator scada_ops  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
-                    "-rw-r--r-- 1 shift_operator scada_ops    528 Sep 20 18:22 historian_connection.conf\n"
-                    "drwxr-xr-x 2 shift_operator scada_ops   4096 Sep 22 00:00 hmi_trends\n"
-                )
-            else:
-                out = (
-                    "total 384\n"
-                    "-rw-r--r-- 1 eng_operator scada_eng 248920 Sep 18 09:12 Refinery_PLC_Logic_Backup_2026.s7p\n"
-                    "-rw------- 1 eng_operator scada_eng   4096 Sep 19 14:03 SCADA_Admin_Master_Keys.kdbx\n"
-                    "-rw-r--r-- 1 eng_operator scada_eng  84112 Sep 15 11:45 Safety_Interlock_Bypass_Codes.pdf\n"
-                    "-rw-r--r-- 1 eng_operator scada_eng  28410 Sep 20 08:30 plant_topology_map.vsdx\n"
-                    "-rw-r--r-- 1 eng_operator scada_eng    528 Sep 20 18:22 historian_connection.conf\n"
-                    "drwxr-xr-x 2 eng_operator scada_eng   4096 Sep 21 00:00 backups\n"
-                )
-        elif "shift_handover" in cmd_lower:
+        # Attacker Intent Profiling & Adaptive Engine
+        persona = "NETWORK_TOPOLOGY_SCOUT"
+        try:
+            from components.common.adaptive_engine import profiler
+            src_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            profile_res = profiler.record_command(src_ip, cmd, session_id=username)
+            if profile_res:
+                persona = profile_res.get("persona", "NETWORK_TOPOLOGY_SCOUT")
+        except Exception:
+            pass
+
+        try:
+            from . import dynamic_lures
+        except ImportError:
+            try:
+                import dynamic_lures
+            except ImportError:
+                from components.workstations.workstation_1.app import dynamic_lures
+
+        # 1. Directory Listing (Morphed dynamically based on active attacker persona)
+        if cmd_clean in ("ls", "dir") or cmd_lower in ("ls -l", "ls -la", "dir /w", "ll"):
+            out = dynamic_lures.get_directory_listing(persona, decoy_role)
+            return jsonify({'output': out, 'error': ''})
+
+        # 2. File Reading & Honeytoken Inspection
+        if any(cmd_lower.startswith(p) for p in ("cat ", "more ", "less ", "head ", "tail ", "view ", "nano ", "vim ")):
+            fname = cmd_clean.split()[-1]
+            out = dynamic_lures.get_file_content(fname, username)
+            return jsonify({'output': out, 'error': ''})
+
+        if cmd_lower.startswith("grep "):
+            fname = cmd_clean.split()[-1]
+            content = dynamic_lures.get_file_content(fname, username)
+            matched_lines = [ln for ln in content.splitlines() if any(k in ln.lower() for k in ("pass", "token", "key", "secret", "admin", "host"))]
+            out = ("\n".join(matched_lines) + "\n") if matched_lines else content
+            return jsonify({'output': out, 'error': ''})
+
+        # 3. Direct Modbus TCP Execution (Real physical Raspberry Pi 4B :502 or Fake PLC Tarpit :502)
+        if "mbtget" in cmd_lower or "modbus" in cmd_lower or "modpoll" in cmd_lower:
+            res = dynamic_lures.execute_modbus_command(cmd_clean)
+            return jsonify(res)
+
+        # 4. Siemens S7comm Protocol Execution
+        if "snap7" in cmd_lower or "s7client" in cmd_lower or ("s7" in cmd_lower and "102" in cmd_lower):
+            res = dynamic_lures.execute_s7comm_command(cmd_clean)
+            return jsonify(res)
+
+        # 5. DNP3 Protocol Execution
+        if "dnp3" in cmd_lower or "crob" in cmd_lower:
+            res = dynamic_lures.execute_dnp3_command(cmd_clean)
+            return jsonify(res)
+
+        # 6. OPC-UA Protocol Execution
+        if "opcua" in cmd_lower or "opc.tcp" in cmd_lower or "uawrite" in cmd_lower:
+            res = dynamic_lures.execute_opcua_command(cmd_clean)
+            return jsonify(res)
+
+        # 7. PLC Logic & Firmware Exploitation Toolchain
+        if any(w in cmd_lower for w in ("codesys_cli", "plc_flash", "st_compile", "objdump", "fw_update", "bootproject", "ob1_main")):
+            res = dynamic_lures.execute_firmware_command(cmd_clean)
+            return jsonify(res)
+
+        # 8. Network Reconnaissance Discovery (Nmap, Ping)
+        if "nmap" in cmd_lower or "ping" in cmd_lower:
             out = (
-                "================================================================================\n"
-                "CRUDE DISTILLATION UNIT (CDU-01) - CENTRAL CONTROL ROOM SHIFT HANDOVER LOG\n"
-                "Date: 2026-09-22 | Shift: B (16:00 - 00:00) | Lead Operator: J. Martinez\n"
-                "CANARY_ID: CANARY-SHIFT-LOG-CDU-88219\n"
-                "================================================================================\n"
-                "OPERATIONAL SUMMARY: CDU-01 throughput at 98.4%. Column pressure 102.4 PSI.\n"
-                "RESTRICTION: Furnace interlock I-402 in AUTO PID. Lockbox #4 code: 8492.\n"
-                "Historian Ingestion Gateway: 192.168.99.50:8086 (Token: canary_tok_ops_99182a)\n"
+                "Starting Nmap 7.80 ( https://nmap.org )\n"
+                "Nmap scan report for plc-codesys-hil (192.168.1.16 - Physical Raspberry Pi 4B CODESYS SoftPLC)\n"
+                "Host is up (0.00035s latency).\n"
+                "PORT      STATE SERVICE  VERSION\n"
+                "22/tcp    open  ssh      OpenSSH 8.9p1 (Ubuntu Linux)\n"
+                "102/tcp   open  iso-tsap Siemens SIMATIC S7 (Emulated)\n"
+                "502/tcp   open  mbap     Modbus TCP (CODESYS Runtime V3.5)\n"
+                "4840/tcp  open  opcua    OPC UA Binary (CODESYS Control Server)\n"
+                "8080/tcp  open  http     CODESYS Industrial HMI Operator Console\n"
+                "20000/tcp open  dnp3     DNP3 Outstation Server\n\n"
+                "Nmap scan report for plc-standby-tarpit (192.168.99.15 - Secondary Standby Modbus Controller)\n"
+                "Host is up (0.00018s latency).\n"
+                "PORT      STATE SERVICE  VERSION\n"
+                "502/tcp   open  mbap     Modbus TCP (Standby Safe-State Controller)\n"
             )
-        elif "emergency_shutdown" in cmd_lower:
-            out = (
-                "[PDF CANARY DOCUMENT: CANARY-SOP-ESD-OVERRIDE-9912]\n"
-                "Title: CDU-01 Standard Operating Procedure - Emergency Shutdown Bypass Protocol\n"
-                "Direct Command: Force coil 0x002A on 192.168.99.10 to value 1.\n"
-                "Master ESD Override Code: 9942\n"
-            )
-        elif "hmi_alarm" in cmd_lower or "alarm_bypass" in cmd_lower:
-            out = (
-                "[SPREADSHEET CANARY: CANARY-XLS-ALARM-7721]\n"
-                "TAG_ID,ALARM_PRIORITY,SUPPRESSION_KEY,OPERATOR_OVERRIDE_PIN\n"
-                "PT-101_HIGH_PRESS,CRITICAL,SUPPRESS_AUTH_9921,8831\n"
-                "TT-204_TEMP_RUNAWAY,HIGH,SUPPRESS_AUTH_9922,4412\n"
-                "FT-301_FEED_LOSS,CRITICAL,SUPPRESS_AUTH_9923,9910\n"
-            )
-        elif "scada_admin_master_keys.kdbx" in cmd_lower:
-            out = (
-                "[KDBX-CANARY-TOKEN-V4]\n"
-                "HEADER: HONEYTOKEN_ID=HT-KDBX-9821-MASTER\n"
-                "SIGNATURE: 0x9AA2D9BF03040002\n"
-                "COMMENT: Critical Industrial Infrastructure Credentials Vault - Level 2 / Level 3 Plant Access\n"
-                "ENTRIES:\n"
-                "1. Host: 192.168.99.10 (Siemens S7-1500) -> User: plc_engineer, Pass: S7_Safety_Override#2026!\n"
-                "2. Host: 192.168.99.12 (Modbus FCCU) -> User: modbus_admin, Pass: ModbusCracking2026$$\n"
-                "3. Host: 192.168.99.50 (Historian Root) -> User: historian_root, Pass: MasterHistorianKey_9918237\n"
-            )
-        elif "safety_interlock_bypass_codes.pdf" in cmd_lower:
-            out = (
-                "================================================================================\n"
-                "REFINERY EMERGENCY SHUTDOWN (ESD) OVERRIDE DIRECTIVE & BYPASS MATRIX\n"
-                "CLASSIFICATION: CONFIDENTIAL // OT SAFETY CRITICAL\n"
-                "DOCUMENT ID: ESD-BYPASS-SEC-2026-04\n"
-                "CANARY TOKEN: CANARY-DOC-ESD-OVERRIDE-9942\n"
-                "================================================================================\n"
-                "Safety PLC Address: 192.168.99.10\n"
-                "Modbus Register: Coil 0x002A (Address 40042)\n"
-                "Override Value: 0x0001 (FORCE HIGH)\n"
-                "ESD Master Bypass Auth Key: ESD-KEY-ALPHA-9942-MASTER\n"
-            )
-        elif "refinery_plc_logic_backup_2026.s7p" in cmd_lower:
-            out = (
-                "SIMATIC_STEP7_PROJECT_BACKUP_V5.6\n"
-                "PROJECT_NAME: REFINERY_DISTILLATION_MAIN_2026\n"
-                "PLC_TYPE: SIEMENS_CPU_414_3_PN_DP\n"
-                "STATION_IP: 192.168.99.10\n"
-                "[BLOCK_DB1] DB_NAME: 'SAFETY_INTERLOCK_VARS' DBX0.0: 'EMERGENCY_STOP_ACTUATED'=FALSE\n"
-            )
-        elif "historian_connection.conf" in cmd_lower:
-            out = (
-                "[HISTORIAN_REMOTE]\n"
-                "HOST=192.168.99.50\n"
-                "PORT=8086\n"
-                "ORG=my_refinery\n"
-                "BUCKET=sensor_logs\n"
-                "TOKEN=supersecrettoken_canary_ht88921\n"
-            )
-        elif cmd_lower in ("whoami",):
+            return jsonify({'output': out, 'error': ''})
+
+        # 9. Standard Linux & Network Discovery Utilities
+        if cmd_lower in ("whoami",):
             out = f"{username}\n"
         elif cmd_lower in ("id",):
-            out = f"uid=1001({username}) gid=1001(scada_eng) groups=1001(scada_eng),27(sudo)\n"
+            out = f"uid=1001({username}) gid=1001(scada_{decoy_role}) groups=1001(scada_{decoy_role}),27(sudo)\n"
         elif cmd_lower in ("pwd",):
             out = f"/home/{username}/scada_workspace\n"
         elif cmd_lower in ("uname -a", "uname"):
@@ -453,81 +443,38 @@ def terminal_exec():
                 f"        inet {device_ip}  netmask 255.255.255.0  broadcast 192.168.99.255\n"
                 f"        ether {device_mac}  txqueuelen 0  (Ethernet)\n"
             )
-        elif "cat /etc/passwd" in cmd_lower:
-            out = (
-                "root:x:0:0:root:/root:/bin/bash\n"
-                "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
-                f"{username}:x:1001:1001:SCADA Engineer:/home/{username}:/bin/bash\n"
-                "shift_operator:x:1002:1002:Central Control Room Shift Operator:/home/shift_operator:/bin/bash\n"
-                "historian_svc:x:1003:1003:Historian Ingestion Service:/var/lib/historian:/usr/sbin/nologin\n"
-            )
-        elif "/etc/hosts" in cmd_lower or "hosts" in cmd_lower:
-            out = (
-                "127.0.0.1       localhost\n"
-                f"127.0.1.1       {hostname}.arabco.local {hostname}\n\n"
-                "# ARABCO Industrial Automation - Level 2 / Level 1 Field Controllers\n"
-                "192.168.99.10   plc-safety-01.arabco.local      # Siemens S7-1500 Safety Controller\n"
-                "192.168.99.12   plc-fccu-modbus.arabco.local    # Modbus TCP Crude Refining Unit (Virtual Decoy)\n"
-                "172.20.10.8     plc-codesys-hil.arabco.local    # Raspberry Pi 4B CODESYS SoftPLC (Physical HIL)\n"
-                "192.168.99.50   historian.arabco.local          # Plant Data Historian Repository\n"
-            )
-        elif "netstat" in cmd_lower:
+        elif "netstat" in cmd_lower or cmd_lower.startswith("ss "):
             out = (
                 "Active Internet connections (only servers)\n"
                 "Proto Recv-Q Send-Q Local Address           Foreign Address         State\n"
                 "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN\n"
                 "tcp        0      0 127.0.0.1:5001          0.0.0.0:*               LISTEN\n"
-                f"tcp        0      0 {device_ip}:44818       0.0.0.0:*               LISTEN\n"
+                f"tcp        0      0 {device_ip}:44818       192.168.1.16:502        ESTABLISHED\n"
+                f"tcp        0      0 {device_ip}:49120       192.168.1.16:4840       ESTABLISHED\n"
                 "udp        0      0 0.0.0.0:68              0.0.0.0:*\n"
             )
         elif "arp" in cmd_lower:
             out = (
-                "? (10.240.20.1) at 02:42:25:a1:00:01 [ether] on eth0\n"
-                "? (192.168.99.10) at 00:1c:06:12:45:aa [ether] on eth0\n"
-                "? (192.168.99.12) at 00:80:f4:33:91:bc [ether] on eth0\n"
-                "? (172.20.10.8) at b8:27:eb:d4:1a:09 [ether] on eth0\n"
-                "? (192.168.99.50) at 02:42:c0:a8:63:32 [ether] on eth0\n"
+                "? (192.168.1.16) at d8:3a:dd:4c:91:08 [ether] on eth0   # Raspberry Pi 4B CODESYS HIL\n"
+                "? (192.168.99.15) at 02:42:c0:a8:63:0f [ether] on eth0  # Standby Fake PLC Tarpit\n"
+                "? (192.168.99.10) at 00:1c:06:12:45:aa [ether] on eth0  # Siemens S7-1500 Safety PLC\n"
+                "? (192.168.99.12) at 00:80:f4:33:91:bc [ether] on eth0  # Modbus FCCU Controller\n"
+                "? (172.20.10.8) at b8:27:eb:d4:1a:09 [ether] on eth0    # Secondary HIL Link\n"
+                "? (192.168.99.50) at 02:42:c0:a8:63:32 [ether] on eth0  # Historian Ingest\n"
             )
         elif "route" in cmd_lower or "ip route" in cmd_lower:
             out = (
                 "default via 192.168.99.1 dev eth0\n"
                 f"192.168.99.0/24 dev eth0 proto kernel scope link src {device_ip}\n"
+                "192.168.1.0/24 via 192.168.99.1 dev eth0\n"
                 "172.20.10.0/24 via 192.168.99.1 dev eth0\n"
             )
-        elif cmd_lower.startswith("mbtget") or "mbtget " in cmd_lower:
-            import re
-            target_match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", cmd_clean)
-            target_ip = target_match.group(1) if target_match else "192.168.99.12"
-            if "-w" in cmd_lower:
-                out = f"Values: [1, 0, 1, 0, 0, 1] - Register write confirmed to {target_ip}\nModbus Response: ExceptionCode=0 (SUCCESS), TransID=4921, UnitID=1\n"
-            else:
-                out = f"Values: [1200, 45, 122, 0, 381] - Holding registers read from {target_ip}\nModbus Response: ExceptionCode=0 (SUCCESS), TransID=4920, UnitID=1\n"
-        elif "nmap" in cmd_lower or "ping" in cmd_lower:
-            import re
-            target_match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", cmd_clean)
-            target_ip = target_match.group(1) if target_match else "192.168.99.10"
-            if "172.20.10.8" in target_ip or "codesys" in cmd_lower:
-                out = (
-                    "Starting Nmap 7.80 ( https://nmap.org )\n"
-                    "Nmap scan report for plc-codesys-hil (172.20.10.8)\n"
-                    "Host is up (0.0012s latency).\n"
-                    "PORT      STATE SERVICE\n"
-                    "102/tcp   open  iso-tsap (Siemens S7)\n"
-                    "502/tcp   open  mbap (Modbus TCP)\n"
-                    "4840/tcp  open  opcua (OPC Unified Architecture)\n"
-                    "8080/tcp  open  http-proxy (CODESYS WebVisu HMI)\n"
-                    "20000/tcp open  dnp3\n"
-                )
-            else:
-                out = (
-                    "Starting Nmap 7.80 ( https://nmap.org )\n"
-                    f"Nmap scan report for plc-target ({target_ip})\n"
-                    "Host is up (0.00041s latency).\n"
-                    "PORT     STATE SERVICE\n"
-                    "102/tcp  open  iso-tsap (Siemens S7)\n"
-                    "502/tcp  open  mbap (Modbus TCP)\n"
-                    "4840/tcp open  opcua (OPC Unified Architecture)\n"
-                )
+        elif cmd_lower in ("help", "man"):
+            out = (
+                "ARABCO Industrial Workstation Shell (v3.5-ot-deception)\n"
+                "Available tools: ls, cat, mbtget, snap7, dnp3, opcua, codesys_cli, plc_flash, st_compile, nmap, ping, arp, netstat, route, ifconfig, whoami, id, pwd\n"
+                "HMI Console: http://192.168.1.16:8080\n"
+            )
         else:
             # Fallback to realistic container execution
             try:

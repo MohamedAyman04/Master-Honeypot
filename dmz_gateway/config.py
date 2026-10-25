@@ -72,7 +72,7 @@ VALID_USERS = {
 
 # Known Honeypot Trap Wordlists (Attempts instantly flagged for deception routing)
 HONEYPOT_WORDLIST = {
-    "password", "123456", "root", "toor", "admin123",
+    "password", "password123", "123456", "root", "toor", "admin123",
     "scada", "codesys", "operator123", "engineer456", "plc", "siemens",
     "guest", "test",
     # Legacy default roles now trapped as honeypot decoys
