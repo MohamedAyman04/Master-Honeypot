@@ -4,8 +4,14 @@ services:
     image: redis:latest
     container_name: ics_state_store
     networks:
-      - ot-net
-      - sandbox-net
+      ot-net:
+        aliases:
+          - redis
+          - ics_state_store
+      sandbox-net:
+        aliases:
+          - redis
+          - ics_state_store
     restart: always
 
   # ── Physical Process Simulator (Purdue Level 0/1 Simulation - Sandboxed Deception) ──
@@ -475,9 +481,22 @@ services:
     volumes:
       - influx-data:/var/lib/influxdb2
     networks:
-      - monitor-net
-      - ot-net
-      - enterprise-net
+      monitor-net:
+        aliases:
+          - historian
+          - ics_historian
+      ot-net:
+        aliases:
+          - historian
+          - ics_historian
+      enterprise-net:
+        aliases:
+          - historian
+          - ics_historian
+      sandbox-net:
+        aliases:
+          - historian
+          - ics_historian
     restart: unless-stopped
 
   # ── Grafana Image Renderer ─────────────────────────────────────────────────
@@ -485,7 +504,10 @@ services:
     image: grafana/grafana-image-renderer:latest
     container_name: ics_grafana_renderer
     networks:
-      - monitor-net
+      monitor-net:
+        aliases:
+          - grafana-image-renderer
+          - ics_grafana_renderer
     environment:
       - ENABLE_METRICS=true
       - RENDERING_MODE=default
@@ -519,9 +541,10 @@ services:
       - historian
       - grafana-image-renderer
     networks:
-      - monitor-net
-    dns:
-      - 127.0.0.11
+      monitor-net:
+        aliases:
+          - grafana
+          - ics_grafana
     restart: unless-stopped
 
   # ── Attacker Node (Purdue Level 3.5 / External Threat Simulation) ─────────────

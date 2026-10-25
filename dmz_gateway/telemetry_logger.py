@@ -262,12 +262,28 @@ def log_routing_telemetry(src_ip, user_agent, username, routing_world, actor_typ
     # Method 2: Direct InfluxDB HTTP v2 Line Protocol
     try:
         line = f'honeypot_attacker_telemetry,device=dmz_gateway,src_ip={src_ip},actor_type={actor_type},routing_world={routing_world},tactic={clean_tactic} is_anomaly={is_anomaly}i,reason="{reason}",dwell_count=1i'
-        requests.post(
-            f"{config.INFLUX_URL}/api/v2/write?org={config.INFLUX_ORG}&bucket={config.INFLUX_BUCKET}&precision=s",
-            headers={"Authorization": f"Token {config.INFLUX_TOKEN}"},
-            data=line,
-            timeout=1.0
-        )
+        lines = [line]
+        if is_anomaly == 1:
+            clean_proto = str(mitre.get("protocol", "Modbus")).replace(" ", "_")
+            clean_tactic_mitre = str(mitre.get("mitre_tactic", "Discovery")).replace(" ", "_")
+            clean_sev = str(mitre.get("severity", "WARNING")).replace(" ", "_")
+            clean_stage = str(mitre.get("kill_chain_stage", "Stage_1")).replace(" ", "_")
+            alert_line = f'security_alerts,device=dmz_gateway,protocol={clean_proto},mitre_tactic={clean_tactic_mitre},severity={clean_sev},purdue_level=Level_3.5,kill_chain_stage={clean_stage},source_ip={src_ip} value=1.0,score=1.0,detail="{reason}"'
+            lines.append(alert_line)
+
+        body = "\n".join(lines) + "\n"
+        for host in ["http://ics_historian:8086", "http://historian:8086", getattr(config, "INFLUX_URL", "http://ics_historian:8086")]:
+            try:
+                r = requests.post(
+                    f"{host}/api/v2/write?org={config.INFLUX_ORG}&bucket={config.INFLUX_BUCKET}&precision=s",
+                    headers={"Authorization": f"Token {config.INFLUX_TOKEN}"},
+                    data=body,
+                    timeout=1.2
+                )
+                if r.status_code in (200, 204):
+                    break
+            except Exception:
+                pass
     except Exception:
         pass
     except Exception:

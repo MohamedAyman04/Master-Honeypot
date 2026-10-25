@@ -40,7 +40,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^_value$/",
+          "fields": "",
           "values": false
         },
         "colorMode": "background",
@@ -121,7 +121,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] == \"command_count\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()\n  |> map(fn: (r) => ({ r with _value: if r.persona == \"PROCESS_SABOTEUR\" then 3 else if r.persona == \"CREDENTIAL_VAULT_HUNTER\" then 2 else if r.persona == \"NETWORK_TOPOLOGY_SCOUT\" then 1 else if r.persona == \"PLC_FIRMWARE_EXPLOITER\" then 4 else 1 }))",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] == \"persona_code\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ]
@@ -145,7 +145,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^_value$/",
+          "fields": "",
           "values": false
         },
         "colorMode": "value",
@@ -209,7 +209,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^_value$/",
+          "fields": "",
           "values": false
         },
         "colorMode": "value",
@@ -264,7 +264,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^_value$/",
+          "fields": "",
           "values": false
         },
         "colorMode": "background",
@@ -320,7 +320,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"plc_telemetry\" and r[\"_field\"] == \"pressure\")\n  |> group()\n  |> count()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"pipeline_metrics\" or r[\"_measurement\"] == \"plc_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"pressure\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ]
@@ -344,7 +344,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "/^_value$/",
+          "fields": "",
           "values": false
         },
         "colorMode": "background",
@@ -515,7 +515,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] == \"score_sabo\" or r[\"_field\"] == \"score_cred\" or r[\"_field\"] == \"score_recon\" or r[\"_field\"] == \"score_logic\")\n  |> aggregateWindow(every: 1m, fn: last, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> group()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"score_sabo\", \"score_cred\", \"score_recon\", \"score_logic\"])",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] =~ /^score_/)\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({\n      _time: r._time,\n      _field: r._field,\n      _value: r._value\n  }))",
           "refId": "A"
         }
       ]
@@ -561,7 +561,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{_field=\"sabo_modbus\"}"
+              "options": "sabo_modbus"
             },
             "properties": [
               {
@@ -580,7 +580,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{_field=\"sabo_s7comm\"}"
+              "options": "sabo_s7comm"
             },
             "properties": [
               {
@@ -599,7 +599,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{_field=\"sabo_dnp3\"}"
+              "options": "sabo_dnp3"
             },
             "properties": [
               {
@@ -618,7 +618,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{_field=\"sabo_opcua\"}"
+              "options": "sabo_opcua"
             },
             "properties": [
               {
@@ -642,7 +642,7 @@
             "type": "influxdb",
             "uid": "influxdb-l2"
           },
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] == \"sabo_modbus\" or r[\"_field\"] == \"sabo_s7comm\" or r[\"_field\"] == \"sabo_dnp3\" or r[\"_field\"] == \"sabo_opcua\")\n  |> group(columns: [\"_field\"])\n  |> max()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"attacker_intent\")\n  |> filter(fn: (r) => r[\"_field\"] =~ /^sabo_/)\n  |> group(columns: [\"_field\"])\n  |> max()\n  |> group()\n  |> pivot(rowKey: [\"_start\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"sabo_modbus\", \"sabo_s7comm\", \"sabo_dnp3\", \"sabo_opcua\"])",
           "refId": "A"
         }
       ]
