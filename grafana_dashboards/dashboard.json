@@ -450,7 +450,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -461,7 +461,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -481,7 +481,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -513,7 +513,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"semantic_injection\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\")) or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"write\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"semantic_injection\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\")) or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"write\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -548,7 +548,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -559,7 +559,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -579,7 +579,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -611,7 +611,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"replay_attack\") or (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"replay_attack\") or (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -646,7 +646,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -657,7 +657,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -677,7 +677,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -709,7 +709,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"dnp3_probe\") or (r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"DNP3\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"dnp3_probe\") or (r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"DNP3\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -744,7 +744,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -755,7 +755,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -775,7 +775,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -807,7 +807,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"s7comm_probe\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"s7comm_probe\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -842,7 +842,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -853,7 +853,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -873,7 +873,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -905,7 +905,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"recon_fc3\") or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"MODBUS_READ\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"recon_fc3\") or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"MODBUS_READ\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -940,7 +940,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -951,7 +951,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -971,7 +971,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1003,7 +1003,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"stealth_drift\") or (r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"stealth_drift\") or (r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1038,7 +1038,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1049,7 +1049,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1069,7 +1069,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1101,7 +1101,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"network_recon\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"RECON_SCAN\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"network_recon\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"RECON_SCAN\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1136,7 +1136,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1147,7 +1147,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1167,7 +1167,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1199,7 +1199,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"cred_harvest\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"CREDENTIAL_HARVEST\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"cred_harvest\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"CREDENTIAL_HARVEST\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1234,7 +1234,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1245,7 +1245,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1265,7 +1265,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1297,7 +1297,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"opcua_sabotage\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"OPC-UA\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"opcua_sabotage\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"OPC-UA\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1332,7 +1332,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1343,7 +1343,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1363,7 +1363,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1395,7 +1395,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"plc_logic_exploit\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"PLC_FIRMWARE_EXPLOIT\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"plc_logic_exploit\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"PLC_FIRMWARE_EXPLOIT\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1430,7 +1430,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1441,7 +1441,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1461,7 +1461,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1493,7 +1493,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"ssh_lateral\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"ssh_lateral\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1528,7 +1528,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1539,7 +1539,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1559,7 +1559,7 @@
             {
               "options": {
                 "0": {
-                  "text": "WAITING",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1591,7 +1591,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"sql_injection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"SQL_INJECTION\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"sql_injection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"SQL_INJECTION\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1681,7 +1681,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1692,7 +1692,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1712,7 +1712,7 @@
             {
               "options": {
                 "0": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1744,7 +1744,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1779,7 +1779,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1790,7 +1790,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1810,7 +1810,7 @@
             {
               "options": {
                 "0": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1842,7 +1842,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1877,7 +1877,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1888,7 +1888,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -1908,7 +1908,7 @@
             {
               "options": {
                 "0": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -1940,7 +1940,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1975,7 +1975,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 0
                 }
@@ -1986,7 +1986,7 @@
               "options": {
                 "match": "empty",
                 "result": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 1
                 }
@@ -2006,7 +2006,7 @@
             {
               "options": {
                 "0": {
-                  "text": "NONE",
+                  "text": "NORMAL",
                   "color": "green",
                   "index": 3
                 }
@@ -2038,7 +2038,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -7s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
