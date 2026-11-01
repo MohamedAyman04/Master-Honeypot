@@ -18,7 +18,7 @@ import urllib.request
 import urllib.parse
 import http.cookiejar
 
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://dmz_gateway:8088")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://dmz_gateway:8010")
 INFLUX_URL = os.getenv("INFLUX_URL", "http://historian:8086")
 INFLUX_TOKEN = os.getenv("INFLUX_TOKEN", "supersecrettoken")
 INFLUX_ORG = os.getenv("INFLUX_ORG", "my_refinery")

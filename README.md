@@ -25,7 +25,7 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 │  • ics_scada_ssh        :2222  ← Engineer/Operator SSH Pivot Host (192.168.50.10)                │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  LEVEL 3.5 — Industrial DMZ & Honeypot Sandbox Deception (dmz-net / sandbox-net)                 │
-│  • dmz_gateway          :8088  ← Secure OT Access Gateway (MFA/2FA + Dual-World Routing Engine)    │
+│  • dmz_gateway          :8010  ← Secure OT Access Gateway (MFA/2FA + Dual-World Routing Engine)    │
 │  • ws_decoy_eng         :5026  ← Sandboxed Decoy Workstation (Honeypot Zone, 192.168.99.21)       │
 │  • ws_decoy_ops         :5027  ← Sandboxed Decoy Operator Console (Honeypot Zone, 192.168.99.31)  │
 │  • plc_simulator        :502   ← High-Interaction Modbus TCP Honeypot                            │
@@ -64,8 +64,8 @@ The architecture implements a full 5-tier Purdue Model decomposition combining s
 
 | Service | Port | URL | Credentials / Notes |
 |---|---|---|---|
-| **DMZ OT Secure Gateway** | `8088` / `8443` | `http://localhost:8088` | `operator` / `Operator2026!` or `engineer` / `Engineer2026!` + TOTP (bypass: `999888`) |
-| **Gateway Diagnostics** | `8088` | `http://localhost:8088/status` | Redirects to Grafana Telemetry Dashboard; JSON at `/api/status` |
+| **DMZ OT Secure Gateway** | `8010` / `8443` | `http://localhost:8010` | `operator` / `Operator2026!` or `engineer` / `Engineer2026!` + TOTP (bypass: `999888`) |
+| **Gateway Diagnostics** | `8010` | `http://localhost:8010/status` | Redirects to Grafana Telemetry Dashboard; JSON at `/api/status` |
 | **Decoy Engineering WS** | `5026` | `http://localhost:5026` | Sandboxed Decoy Workstation (Siemens Field PG M6 Canary Honeytokens) |
 | **Decoy Operator Console**| `5027` | `http://localhost:5027` | Sandboxed Decoy Operator Console (Rockwell ASEM 6300B Canary Honeytokens) |
 | **Grafana Dashboards** | `3005` | `http://localhost:3005` | `admin` / `admin` (Level 2 SCADA, Forensics & DMZ Gateway Telemetry) |
@@ -97,7 +97,7 @@ The framework implements a dynamic dual-world routing engine at Purdue Level 3.5
 [Remote User / Ingress]
          │
          ▼
-[DMZ Secure OT Access Gateway (:8088)]
+[DMZ Secure OT Access Gateway (:8010)]
    ├── 1. Deep Anomaly & Exploit Inspection (SQLi, Traversal, Scanner UA, Wordlists)
    ├── 2. Primary Credential Authentication (operator / engineer)
    └── 3. RFC 6238 TOTP Multi-Factor Authentication (MFA / 2FA / OTP)

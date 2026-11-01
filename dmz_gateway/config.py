@@ -4,7 +4,7 @@ DMZ Secure OT Access Gateway - Configuration
 import os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dmz_secure_gateway_master_key_2026")
-GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", 8088))
+GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", 8010))
 
 # Dual-World Target Endpoints
 # ── Normal Telemetry (4 Workstations: 2 Engineers, 2 Operators) ─────────────

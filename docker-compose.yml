@@ -649,11 +649,11 @@ services:
     container_name: dmz_gateway
     hostname: dmz-gateway-01
     ports:
-      - "8088:8088"
+      - "8010:8010"
       - "8443:8443"
     env_file: .env
     environment:
-      - GATEWAY_PORT=8088
+      - GATEWAY_PORT=8010
       - REAL_WORKSTATION_URL=http://ws_eng_01:5001
       - REAL_OPS_WORKSTATION_URL=http://ws_ops_01:5001
       - REAL_HISTORIAN_URL=http://historian_api:5000

@@ -59,7 +59,7 @@ def _resolve_pi_host():
 PI_HOST = _resolve_pi_host()
 PI_MODBUS_PORT = 502
 PI_HMI_PORT = 8080
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8088")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8010")
 INFLUX_URL = os.getenv("INFLUX_URL", "http://localhost:8086")
 STORY_LOGGER_URL = os.getenv("STORY_LOGGER_URL", "http://localhost:8600")
 
