@@ -420,20 +420,33 @@ def terminal_exec():
             res = dynamic_lures.execute_firmware_command(cmd_clean)
             return jsonify(res)
 
+        # 7b. Replay Attack & EWMA Stealth Drift & SSH Lateral Movement
+        if any(w in cmd_lower for w in ("replay_inject", "replay_attack", "pipeline_metrics")):
+            res = dynamic_lures.execute_replay_command(cmd_clean)
+            return jsonify(res)
+
+        if any(w in cmd_lower for w in ("ewma_drift", "stealth_drift", "cusum_drift")):
+            res = dynamic_lures.execute_stealth_drift_command(cmd_clean)
+            return jsonify(res)
+
+        if cmd_lower.startswith("ssh ") or cmd_lower.startswith("sshpass "):
+            res = dynamic_lures.execute_ssh_command(cmd_clean)
+            return jsonify(res)
+
         # 8. Network Reconnaissance Discovery (Nmap, Ping)
         if "nmap" in cmd_lower or "ping" in cmd_lower:
             out = (
                 "Starting Nmap 7.80 ( https://nmap.org )\n"
-                "Nmap scan report for plc-codesys-hil (192.168.1.16 - Physical Raspberry Pi 4B CODESYS SoftPLC)\n"
+                "Nmap scan report for scada-server.arabco.local (192.168.1.16 - Scada Server)\n"
                 "Host is up (0.00035s latency).\n"
                 "PORT      STATE SERVICE  VERSION\n"
                 "22/tcp    open  ssh      OpenSSH 8.9p1 (Ubuntu Linux)\n"
-                "102/tcp   open  iso-tsap Siemens SIMATIC S7 (Emulated)\n"
+                "102/tcp   open  iso-tsap Siemens SIMATIC S7\n"
                 "502/tcp   open  mbap     Modbus TCP (CODESYS Runtime V3.5)\n"
                 "4840/tcp  open  opcua    OPC UA Binary (CODESYS Control Server)\n"
                 "8080/tcp  open  http     CODESYS Industrial HMI Operator Console\n"
                 "20000/tcp open  dnp3     DNP3 Outstation Server\n\n"
-                "Nmap scan report for plc-standby-tarpit (192.168.99.15 - Secondary Standby Modbus Controller)\n"
+                "Nmap scan report for plc-standby.arabco.local (192.168.99.15 - Standby Controller)\n"
                 "Host is up (0.00018s latency).\n"
                 "PORT      STATE SERVICE  VERSION\n"
                 "502/tcp   open  mbap     Modbus TCP (Standby Safe-State Controller)\n"
@@ -604,6 +617,12 @@ def historian_query():
 
     if is_sqli:
         log_activity('SECURITY_ALERT', f"SQL_INJECTION_DETECTED || USER={username} || INPUT={user_input}")
+        try:
+            from components.common.adaptive_engine import profiler
+            src_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            profiler.record_command(src_ip, f"sql_injection {user_input[:80]}", session_id=username)
+        except Exception:
+            pass
         try:
             from components.common.story_client import StoryClient
             StoryClient(component="workstation_historian", level="Level 3").log(

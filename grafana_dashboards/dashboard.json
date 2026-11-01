@@ -309,7 +309,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "ML Anomaly Score"
         },
         "overrides": []
       },
@@ -388,7 +389,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "displayName": "Pressure Delta (PSI)"
         },
         "overrides": []
       },
@@ -491,7 +493,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 6,
         "x": 0,
         "y": 35
@@ -511,11 +513,11 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"semantic_injection\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\")) or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"write\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "Semantic Injection",
+      "title": "Semantic Injection (FC6)",
       "type": "stat"
     },
     {
@@ -589,7 +591,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 6,
         "x": 6,
         "y": 35
@@ -609,7 +611,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\")\n  )\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"replay_attack\") or (r[\"_measurement\"] == \"attack_status\" and r[\"attack_type\"] == \"REPLAY\" and r[\"_field\"] == \"status\" and r[\"_value\"] == \"DETECTED\") or (r[\"_measurement\"] == \"security_alerts\" and r[\"alert_type\"] == \"REPLAY_ATTACK\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -687,7 +689,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 6,
         "x": 12,
         "y": 35
@@ -707,11 +709,11 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\" and r[\"_field\"] == \"port\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"dnp3_probe\") or (r[\"_measurement\"] == \"recon_scan_events\" and r[\"event_type\"] == \"recon_scan_detection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"DNP3\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "DNP3 Probe",
+      "title": "DNP3 Probe / CROB Trip",
       "type": "stat"
     },
     {
@@ -785,7 +787,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 6,
         "x": 18,
         "y": 35
@@ -805,109 +807,11 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"s7comm_probe\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"S7comm\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "S7comm Probe",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "WAITING",
-                  "color": "green",
-                  "index": 0
-                }
-              },
-              "type": "special"
-            },
-            {
-              "options": {
-                "match": "empty",
-                "result": {
-                  "text": "WAITING",
-                  "color": "green",
-                  "index": 1
-                }
-              },
-              "type": "special"
-            },
-            {
-              "options": {
-                "1": {
-                  "text": "DETECTED",
-                  "color": "red",
-                  "index": 2
-                }
-              },
-              "type": "value"
-            },
-            {
-              "options": {
-                "0": {
-                  "text": "WAITING",
-                  "color": "green",
-                  "index": 3
-                }
-              },
-              "type": "value"
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 41
-      },
-      "id": 14,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "colorMode": "value",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
-          "refId": "A"
-        }
-      ],
-      "title": "Reconnaissance Scan (FC3 Read-Only)",
+      "title": "S7comm Probe / DB1 Write",
       "type": "stat"
     },
     {
@@ -981,10 +885,108 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 41
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 40
+      },
+      "id": 14,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"recon_fc3\") or (r[\"_measurement\"] == \"modbus_events\" and r[\"fc_type\"] == \"read\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"MODBUS_READ\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Recon Scan (FC3 Read)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 40
       },
       "id": 15,
       "options": {
@@ -1001,11 +1003,599 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\") and r[\"_field\"] == \"score\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"stealth_drift\") or (r[\"_measurement\"] == \"security_alerts\" and (r[\"alert_type\"] == \"STEALTH_DRIFT_EWMA\" or r[\"alert_type\"] == \"STEALTH_DRIFT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
-      "title": "EWMA Stealth Drift (CUSUM Detection)",
+      "title": "EWMA Stealth Drift",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 40
+      },
+      "id": 16,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"network_recon\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"RECON_SCAN\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Network Recon (Nmap)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 40
+      },
+      "id": 17,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"cred_harvest\") or (r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"CREDENTIAL_HARVEST\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Credential Harvesting",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 45
+      },
+      "id": 18,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"opcua_sabotage\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"protocol\"] == \"OPC-UA\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "OPC-UA Sabotage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 45
+      },
+      "id": 19,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"plc_logic_exploit\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"PLC_FIRMWARE_EXPLOIT\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "PLC Logic & Firmware",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 45
+      },
+      "id": 25,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"ssh_lateral\") or (r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\")))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "SSH Lateral Movement",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 1
+                }
+              },
+              "type": "special"
+            },
+            {
+              "options": {
+                "1": {
+                  "text": "DETECTED",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "0": {
+                  "text": "WAITING",
+                  "color": "green",
+                  "index": 3
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 45
+      },
+      "id": 26,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (r[\"_measurement\"] == \"attack_results\" and r[\"attack_type\"] == \"sql_injection\") or (r[\"_measurement\"] == \"honeypot_events\" and r[\"event_type\"] == \"SQL_INJECTION\"))\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Historian SQL Injection",
       "type": "stat"
     },
     {
@@ -1014,7 +1604,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 47
+        "y": 50
       },
       "id": 103,
       "title": "Protocol Honeypot Events",
@@ -1035,7 +1625,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 51
       },
       "id": 13,
       "options": {
@@ -1044,7 +1634,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"honeypot_events\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"protocol\", \"event_type\", \"severity\", \"command\", \"narrative\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
           "refId": "A"
         }
       ],
@@ -1057,7 +1647,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 60
       },
       "id": 104,
       "title": "Terminal Operator Commands (Host-Side Attacks)",
@@ -1137,7 +1727,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 58
+        "y": 61
       },
       "id": 20,
       "options": {
@@ -1154,7 +1744,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"AUTH_ATTEMPT\" or r[\"event_type\"] == \"LATERAL_MOVEMENT\") and r[\"_field\"] == \"value\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n  |> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1235,7 +1825,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 58
+        "y": 61
       },
       "id": 21,
       "options": {
@@ -1252,7 +1842,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and r[\"event_type\"] == \"API_ACCESS\" and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1333,7 +1923,7 @@
         "h": 5,
         "w": 6,
         "x": 12,
-        "y": 58
+        "y": 61
       },
       "id": 22,
       "options": {
@@ -1350,7 +1940,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_WRITE\" or r[\"event_type\"] == \"modbus_write\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1431,7 +2021,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 58
+        "y": 61
       },
       "id": 23,
       "options": {
@@ -1448,7 +2038,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -10s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\" and (r[\"event_type\"] == \"MODBUS_READ\" or r[\"event_type\"] == \"modbus_read\" or r[\"event_type\"] == \"CREDENTIAL_DISCOVERY\" or r[\"event_type\"] == \"credential_discovery\") and r[\"_field\"] == \"value\")\n|> group()\n|> count()\n|> map(fn: (r) => ({r with _value: if r[\"_value\"] > 0 then 1.0 else 0.0}))\n|> max(column: \"_value\")",
           "refId": "A"
         }
       ],
@@ -1470,7 +2060,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 66
       },
       "id": 24,
       "options": {
@@ -1479,7 +2069,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"terminal_commands\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"protocol\", \"event_type\", \"severity\", \"command\", \"outcome\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)",
           "refId": "A"
         }
       ],
@@ -1492,7 +2082,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 76
       },
       "id": 110,
       "panels": [],
@@ -1537,7 +2127,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 74
+        "y": 77
       },
       "id": 111,
       "options": {
@@ -1598,7 +2188,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 74
+        "y": 77
       },
       "id": 112,
       "options": {
@@ -1663,7 +2253,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 74
+        "y": 77
       },
       "id": 113,
       "options": {
@@ -1737,7 +2327,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 74
+        "y": 77
       },
       "id": 114,
       "options": {
@@ -1770,7 +2360,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 85
       },
       "id": 200,
       "title": "Monitor Zone \u2014 4-Model ML & 5-Layer Alert Fusion (Honeypot)",
@@ -1834,7 +2424,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 83
+        "y": 86
       },
       "id": 201,
       "options": {
@@ -1902,7 +2492,7 @@
         "h": 6,
         "w": 6,
         "x": 6,
-        "y": 83
+        "y": 86
       },
       "id": 202,
       "options": {
@@ -1949,7 +2539,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 83
+        "y": 86
       },
       "id": 203,
       "targets": [
@@ -1981,7 +2571,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 89
+        "y": 92
       },
       "id": 204,
       "targets": [
@@ -2013,7 +2603,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 89
+        "y": 92
       },
       "id": 205,
       "targets": [
@@ -2045,7 +2635,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 89
+        "y": 92
       },
       "id": 206,
       "targets": [
@@ -2077,7 +2667,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 89
+        "y": 92
       },
       "id": 207,
       "targets": [
@@ -2147,7 +2737,7 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 96
+        "y": 99
       },
       "id": 208,
       "options": {
@@ -2232,7 +2822,7 @@
         "h": 5,
         "w": 5,
         "x": 4,
-        "y": 96
+        "y": 99
       },
       "id": 209,
       "options": {
@@ -2317,7 +2907,7 @@
         "h": 5,
         "w": 5,
         "x": 9,
-        "y": 96
+        "y": 99
       },
       "id": 210,
       "options": {
@@ -2402,7 +2992,7 @@
         "h": 5,
         "w": 5,
         "x": 14,
-        "y": 96
+        "y": 99
       },
       "id": 211,
       "options": {
@@ -2487,7 +3077,7 @@
         "h": 5,
         "w": 5,
         "x": 19,
-        "y": 96
+        "y": 99
       },
       "id": 212,
       "options": {
@@ -2529,7 +3119,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 104
       },
       "id": 213,
       "options": {

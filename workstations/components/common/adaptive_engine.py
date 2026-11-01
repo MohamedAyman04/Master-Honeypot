@@ -271,13 +271,13 @@ class AttackerIntentProfiler:
         result = profile.inspect_command(cmd)
         
         # Publish live metrics to InfluxDB & story_logger for Grafana
-        self._publish_influx_metrics(profile)
+        self._publish_influx_metrics(profile, cmd, result)
         self._publish_story_log(profile, cmd, result)
         
         return result
 
-    def _publish_influx_metrics(self, profile: AttackerProfile):
-        """Asynchronously writes attacker_intent points for Grafana dashboards using HTTP Line Protocol."""
+    def _publish_influx_metrics(self, profile: AttackerProfile, cmd: str = "", result: dict = None):
+        """Asynchronously writes attacker_intent and attack detection points for Grafana dashboards."""
         try:
             scores = profile.normalized_scores
             ip_tag = (profile.ip or "unknown").replace(" ", "_")
@@ -289,8 +289,9 @@ class AttackerIntentProfiler:
                 "PLC_FIRMWARE_EXPLOITER": 4
             }
             p_code = persona_code_map.get(profile.dominant_persona, 1)
+            ts = time.time_ns()
 
-            line = (
+            lines = [
                 f"attacker_intent,attacker_ip={ip_tag},persona={persona_tag} "
                 f"persona_code={p_code}i,"
                 f"score_recon={float(scores['recon'])},"
@@ -303,16 +304,76 @@ class AttackerIntentProfiler:
                 f"sabo_s7comm={int(profile.sabo_protocol_counts['s7comm'])}i,"
                 f"sabo_dnp3={int(profile.sabo_protocol_counts['dnp3'])}i,"
                 f"sabo_opcua={int(profile.sabo_protocol_counts['opcua'])}i "
-                f"{time.time_ns()}\n"
-            )
+                f"{ts}"
+            ]
+
+            if cmd:
+                cmd_clean = cmd.strip()
+                cmd_lower = cmd_clean.lower()
+                cmd_esc = cmd_clean.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")[:120]
+                matched = (result or {}).get("matched_vectors", [])
+
+                if any(w in cmd_lower for w in ("replay_inject", "replay_attack", "pipeline_metrics")):
+                    lines.append(f'attack_results,attack_type=replay_attack success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'attack_status,attack_type=REPLAY status="DETECTED",value=1.0 {ts}')
+                    lines.append(f'security_alerts,alert_type=REPLAY_ATTACK,event_type=REPLAY_ATTACK,protocol=InfluxDB,severity=CRITICAL,mitre_tactic=Impair_Process_Control,mitre_technique_id=T0856,layer=Level\\ 2,service=historian value=1.0,score=1.0,delta=72.0,narrative="Replay attack detected: {cmd_esc}" {ts}')
+                    lines.append(f'security_alerts,alert_type=REPLAY_DELTA_LOG,protocol=InfluxDB,severity=CRITICAL delta=72.0,value=1.0 {ts}')
+                elif any(w in cmd_lower for w in ("ewma_drift", "stealth_drift", "cusum_drift")):
+                    lines.append(f'attack_results,attack_type=stealth_drift success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'security_alerts,alert_type=STEALTH_DRIFT_EWMA,event_type=STEALTH_DRIFT_EWMA,protocol=Modbus,severity=CRITICAL,mitre_tactic=Impair_Process_Control,mitre_technique_id=T0836,layer=Level\\ 2,service=plc_simulator score=4.85,value=1.0,narrative="EWMA CUSUM stealth drift detected: {cmd_esc}" {ts}')
+                elif any(w in cmd_lower for w in ("sql_injection", "sqlmap", "union select", "system_secrets", "or 1=1")):
+                    lines.append(f'attack_results,attack_type=sql_injection success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'terminal_commands,event_type=API_ACCESS,protocol=HTTP_SQLI,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=SQL_INJECTION,protocol=HTTP_SQLI,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="Historian SQL Injection attempt" {ts}')
+                elif cmd_lower.startswith("ssh ") or "sshpass" in cmd_lower or cmd_lower.startswith("scp "):
+                    lines.append(f'attack_results,attack_type=ssh_lateral success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'terminal_commands,event_type=LATERAL_MOVEMENT,protocol=SSH,severity=HIGH,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=LATERAL_MOVEMENT,protocol=SSH,severity=HIGH value=1.0,command="{cmd_esc}",narrative="SSH lateral movement probe to Scada Server" {ts}')
+                elif "sabo_modbus" in matched or (("mbtget" in cmd_lower or "modbus" in cmd_lower) and ("-w" in cmd_lower or "write" in cmd_lower)):
+                    lines.append(f'attack_results,attack_type=semantic_injection success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'terminal_commands,event_type=MODBUS_WRITE,protocol=Modbus,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=MODBUS_WRITE,protocol=Modbus,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="Unauthorized Modbus FC6/16 register write" {ts}')
+                    lines.append(f'modbus_events,fc_type=write,protocol=Modbus value=1.0 {ts}')
+                elif ("mbtget" in cmd_lower or "modbus" in cmd_lower or "modpoll" in cmd_lower) and not ("-w" in cmd_lower or "write" in cmd_lower):
+                    lines.append(f'attack_results,attack_type=recon_fc3 success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'modbus_events,fc_type=read,protocol=Modbus value=1.0 {ts}')
+                    lines.append(f'terminal_commands,event_type=MODBUS_READ,protocol=Modbus,severity=WARNING,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=MODBUS_READ,protocol=Modbus,severity=WARNING value=1.0,command="{cmd_esc}",narrative="Modbus FC3 holding register enumeration" {ts}')
+                elif "sabo_s7comm" in matched or "snap7" in cmd_lower or "s7client" in cmd_lower or "s7comm" in cmd_lower or ("s7" in cmd_lower and "102" in cmd_lower):
+                    lines.append(f'attack_results,attack_type=s7comm_probe success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'honeypot_events,event_type=S7COMM_SABOTAGE,protocol=S7comm,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="Siemens S7comm ISO-on-TCP DB1 probe/write" {ts}')
+                    lines.append(f'terminal_commands,event_type=S7COMM_WRITE,protocol=S7comm,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                elif "sabo_dnp3" in matched or "dnp3" in cmd_lower or "crob" in cmd_lower:
+                    lines.append(f'attack_results,attack_type=dnp3_probe success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'recon_scan_events,event_type=recon_scan_detection,protocol=DNP3 port=20000i,value=1.0 {ts}')
+                    lines.append(f'honeypot_events,event_type=DNP3_CROB_TRIP,protocol=DNP3,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="DNP3 Outstation CROB Direct Operate Trip" {ts}')
+                    lines.append(f'terminal_commands,event_type=DNP3_CONTROL,protocol=DNP3,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                elif "sabo_opcua" in matched or "opcua" in cmd_lower or "uawrite" in cmd_lower or "opc.tcp" in cmd_lower:
+                    lines.append(f'attack_results,attack_type=opcua_sabotage success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'honeypot_events,event_type=OPCUA_WRITE,protocol=OPC-UA,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="OPC-UA WriteAttribute setpoint override" {ts}')
+                    lines.append(f'terminal_commands,event_type=OPCUA_WRITE,protocol=OPC-UA,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                elif "logic" in matched or any(w in cmd_lower for w in ("codesys_cli", "plc_flash", "st_compile", "objdump", "fw_update", "bootproject", "ob1", ".project", ".s7p", ".st")):
+                    lines.append(f'attack_results,attack_type=plc_logic_exploit success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'honeypot_events,event_type=PLC_FIRMWARE_EXPLOIT,protocol=CODESYS,severity=CRITICAL value=1.0,command="{cmd_esc}",narrative="PLC runtime logic/firmware manipulation" {ts}')
+                    lines.append(f'terminal_commands,event_type=FIRMWARE_TAMPER,protocol=CODESYS,severity=CRITICAL,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                elif "cred" in matched:
+                    lines.append(f'attack_results,attack_type=cred_harvest success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'terminal_commands,event_type=CREDENTIAL_DISCOVERY,protocol=SSH_SHELL,severity=HIGH,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=CREDENTIAL_HARVEST,protocol=File_Lure,severity=HIGH value=1.0,command="{cmd_esc}",narrative="Honeytoken credential file accessed" {ts}')
+                elif "recon" in matched or "recon_general" in matched:
+                    lines.append(f'attack_results,attack_type=network_recon success=1i,value=1.0,detail="{cmd_esc}" {ts}')
+                    lines.append(f'terminal_commands,event_type=API_ACCESS,protocol=TCP_SCAN,severity=WARNING,source=terminal value=1.0,command="{cmd_esc}",outcome="observed" {ts}')
+                    lines.append(f'honeypot_events,event_type=RECON_SCAN,protocol=TCP_SCAN,severity=WARNING value=1.0,command="{cmd_esc}",narrative="Active network/host reconnaissance command" {ts}')
+
+            payload_body = "\n".join(lines) + "\n"
             url = f"{self.influx_url}/api/v2/write?org={self.influx_org}&bucket={self.influx_bucket}&precision=ns"
             headers = {
                 "Authorization": f"Token {self.influx_token}",
                 "Content-Type": "text/plain; charset=utf-8"
             }
             import urllib.request
-            req = urllib.request.Request(url, data=line.encode("utf-8"), headers=headers)
-            urllib.request.urlopen(req, timeout=1.0)
+            req = urllib.request.Request(url, data=payload_body.encode("utf-8"), headers=headers)
+            urllib.request.urlopen(req, timeout=1.5)
         except Exception:
             pass
 

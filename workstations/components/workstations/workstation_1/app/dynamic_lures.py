@@ -141,7 +141,7 @@ def get_file_content(filename: str, username: str = "eng_operator") -> str:
             "HEADER: HONEYTOKEN_ID=HT-KDBX-9821-MASTER\n"
             "COMMENT: Refinery Control Vault — Critical Industrial Infrastructure\n"
             "ENTRIES:\n"
-            "1. Primary SoftPLC: 192.168.1.16 (Raspberry Pi 4B CODESYS) -> User: mohamed-ayman, Pass: mohamed2004\n"
+            "1. Primary Scada Server: 192.168.1.16 (CODESYS SoftPLC) -> User: mohamed-ayman, Pass: mohamed2004\n"
             "2. HMI Web Console: http://192.168.1.16:8080 (Industrial HMI Operator View)\n"
             "3. Secondary Modbus Gateway: 192.168.99.15:502 -> User: modbus_admin, Pass: ModbusCracking2026$$\n"
             "4. Historian Root: 192.168.99.50:8086 -> User: historian_root, Token: ht_canary_hist_9918237\n"
@@ -149,7 +149,7 @@ def get_file_content(filename: str, username: str = "eng_operator") -> str:
     elif "rpi_codesys_access" in fn or "codesys" in fn and "conf" in fn:
         return (
             "# ARABCO Industrial Automation — CODESYS SoftPLC Node Configuration\n"
-            "PLC_HARDWARE_TARGET=Raspberry Pi 4B Industrial Edge\n"
+            "PLC_HARDWARE_TARGET=Scada Server Industrial Edge\n"
             "PLC_IP=192.168.1.16\n"
             "MODBUS_TCP_PORT=502\n"
             "OPCUA_TCP_PORT=4840\n"
@@ -183,14 +183,21 @@ def get_file_content(filename: str, username: str = "eng_operator") -> str:
             "HMI Operator View: Available on http://192.168.1.16:8080\n"
             "Secondary Modbus Unit: 192.168.99.15 (Standby Buffer Controller)\n"
         )
-    elif "project" in fn or "s7p" in fn:
+    elif "project" in fn or "s7p" in fn or "ob1" in fn or ".st" in fn:
         return (
             "CODESYS_V35_APPLICATION_BINARY_METADATA\n"
             "PROJECT_NAME: ARABCO_CDU01_HYDRAULIC_PIPELINE\n"
-            "TARGET_DEVICE: Raspberry_Pi_4B_CODESYS_Control_for_Raspberry_Pi\n"
+            "TARGET_DEVICE: ARABCO_Scada_Server_CODESYS_Runtime\n"
             "DEVICE_ENDPOINT: opc.tcp://192.168.1.16:4840/codesys/server/\n"
             "HMI_URL: http://192.168.1.16:8080\n"
             "CANARY_TOKEN: CANARY-PLC-PROJECT-9912\n"
+            "\n"
+            "PROGRAM PLC_PRG\n"
+            "VAR\n"
+            "    rTargetRPM : REAL := 1200.0;\n"
+            "    rValvePos  : REAL := 50.0;\n"
+            "    bSafetyInterlock : BOOL := TRUE;\n"
+            "END_VAR\n"
         )
     elif "historian_connection" in fn:
         return (
@@ -213,12 +220,12 @@ def get_file_content(filename: str, username: str = "eng_operator") -> str:
         )
     elif "diagnostics" in fn or "runtime" in fn:
         return (
-            "[CODESYS Control V3.5.19.0 Runtime Log — Raspberry Pi 4B Edge PLC]\n"
+            "[CODESYS Control V3.5.19.0 Runtime Log — Scada Server Edge PLC]\n"
             "2026-10-22 18:00:01 [INFO]CmpApp: Application 'ARABCO_CDU01_HYDRAULIC_PIPELINE' loaded from BootProject.app\n"
             "2026-10-22 18:00:02 [INFO]CmpBlkDrvTcp: Listening on 192.168.1.16:11740 (CODESYS Gateway)\n"
             "2026-10-22 18:00:02 [INFO]CmpOPCUAServer: Endpoint opc.tcp://192.168.1.16:4840 active\n"
             "2026-10-22 18:00:03 [INFO]CmpWebServer: HMI service active on http://192.168.1.16:8080\n"
-            "2026-10-22 18:00:03 [WARN]CmpSecurityManager: Unauthenticatedonline change permitted in engineering mode\n"
+            "2026-10-22 18:00:03 [WARN]CmpSecurityManager: Unauthenticated online change permitted in engineering mode\n"
         )
     elif "id_rsa" in fn:
         return (
@@ -367,7 +374,7 @@ def execute_modbus_command(cmd: str) -> dict:
             press = round(122.0 + (rpm - 1200) * 0.078, 1)
             flow = round(max(0.0, rpm * 0.01), 1)
             out = (
-                f"[+] Modbus FC6 Write Confirmed on Physical Raspberry Pi ({target_ip}:502)!\n"
+                f"[+] Modbus FC6 Write Confirmed on Scada Server ({target_ip}:502)!\n"
                 f"    Register [{reg}] successfully updated to value: {val}\n"
                 f"    Live Verification Readback: Reg 0 (Pump RPM)={rpm} | Reg 1 (Valve)=50.0% | "
                 f"Reg 2 (Pressure)={press} PSI | Reg 3 (Flow)={flow} L/s\n"
@@ -386,7 +393,7 @@ def execute_modbus_command(cmd: str) -> dict:
             return {"output": out, "error": ""}
 
 def execute_s7comm_command(cmd: str) -> dict:
-    """Simulates S7comm interaction against Raspberry Pi or ics_s7_plc."""
+    """Simulates S7comm interaction against Scada Server or ics_s7_plc."""
     out = (
         f"[+] S7comm ISO-on-TCP Handshake with Siemens S7 Controller (192.168.1.16:102):\n"
         f"    COTP Connection: Confirmed (CC, TPDU size=1024)\n"
@@ -401,12 +408,12 @@ def execute_s7comm_command(cmd: str) -> dict:
     return {"output": out, "error": ""}
 
 def execute_dnp3_command(cmd: str) -> dict:
-    """Simulates DNP3 Outstation interaction against Raspberry Pi or ics_dnp3."""
+    """Simulates DNP3 Outstation interaction against Scada Server or ics_dnp3."""
     out = (
         f"[+] DNP3 Link-Layer Session Active (Target: 192.168.1.16:20000 | Outstation: 1):\n"
         f"    Function 0x00 (CONFIRM / ACK) received. Sequence: 4\n"
     )
-    if "control" in cmd.lower() or "direct" in cmd.lower() or "trip" in cmd.lower():
+    if "control" in cmd.lower() or "direct" in cmd.lower() or "trip" in cmd.lower() or "crob" in cmd.lower():
         out += (
             f"    [!] DNP3 Function 0x05 (DIRECT_OPERATE) accepted by Outstation.\n"
             f"    CROB Status: Control Relay Output Block code 0x01 (TRIP) confirmed on Index 0.\n"
@@ -414,15 +421,15 @@ def execute_dnp3_command(cmd: str) -> dict:
     return {"output": out, "error": ""}
 
 def execute_opcua_command(cmd: str) -> dict:
-    """Interacts with OPC UA server on Raspberry Pi (192.168.1.16:4840)."""
+    """Interacts with OPC UA server on Scada Server (192.168.1.16:4840)."""
     out = (
         f"[+] OPC UA Binary Session Connected to opc.tcp://192.168.1.16:4840/codesys/server/:\n"
-        f"    Server: CODESYS Control for Raspberry Pi 4B (Version: 3.5.19)\n"
-        f"    Namespace Index: http://codesys.raspberrypi.honeypot\n"
+        f"    Server: CODESYS Industrial Control Server (Version: 3.5.19)\n"
+        f"    Namespace Index: http://arabco.scada.industrial\n"
     )
-    if "write" in cmd.lower() or "set" in cmd.lower() or "stop" in cmd.lower():
+    if "write" in cmd.lower() or "set" in cmd.lower() or "stop" in cmd.lower() or "uawrite" in cmd.lower():
         out += (
-            f"    [!] WriteAttribute (AccessLevel=CurrentWrite) confirmed for node ns=2;s=CODESYS_RaspberryPi_PLC.PumpRPM\n"
+            f"    [!] WriteAttribute (AccessLevel=CurrentWrite) confirmed for node ns=2;s=CODESYS_PLC.PumpRPM\n"
             f"    StatusCode: Good (0x00000000)\n"
         )
     else:
@@ -435,9 +442,64 @@ def execute_firmware_command(cmd: str) -> dict:
     """Simulates PLC logic and firmware manipulation commands against CODESYS SoftPLC / S7-400."""
     out = (
         f"[+] CODESYS V3.5 / STEP7 Engineering Toolchain Connected (Target: 192.168.1.16:11740)\n"
-        f"    Runtime Version: CODESYS Control V3.5.19.0 (ARM64 Linux / Raspberry Pi 4B)\n"
+        f"    Runtime Version: CODESYS Control V3.5.19.0 (ARM64 Linux / Scada Server)\n"
         f"    Active Application: ARABCO_CDU01_HYDRAULIC_PIPELINE (CRC32: 0x8F4A29E1)\n"
-        f"    [!] Online Change / Logic Block Transfer staged in Deception Sandbox Buffer.\n"
-        f"    Status: BootProject.app & OB1_Main_Cycle.st checksum verified (CANARY-FW-8821).\n"
+        f"    [!] Online Change / Logic Block Transfer staged in Runtime Execution Buffer.\n"
+        f"    Status: BootProject.app & OB1_Main_Cycle.st checksum verified (BUILD-FW-8821).\n"
+    )
+    return {"output": out, "error": ""}
+
+def execute_replay_command(cmd: str) -> dict:
+    """Executes a telemetry Replay Attack against the Historian & Scada Server."""
+    out = (
+        f"[+] Replay Attack Module Initialized (Target Historian: 192.168.99.50:8086 | Source: 192.168.1.16)\n"
+        f"    Capturing baseline steady-state frame: PT-101=50.5 PSI, FT-104=12.0 L/s, P-101A=1200 RPM\n"
+        f"    [1/5] Injected spoofed telemetry packet -> PT-101=50.5 PSI (HTTP 204 No Content)\n"
+        f"    [2/5] Injected spoofed telemetry packet -> PT-101=50.5 PSI (HTTP 204 No Content)\n"
+        f"    [3/5] Injected spoofed telemetry packet -> PT-101=50.5 PSI (HTTP 204 No Content)\n"
+        f"    [4/5] Injected spoofed telemetry packet -> PT-101=50.5 PSI (HTTP 204 No Content)\n"
+        f"    [5/5] Injected spoofed telemetry packet -> PT-101=50.5 PSI (HTTP 204 No Content)\n"
+        f"[!] Replay buffer active: Masking physical pressure surge (+72.0 PSI delta) from operator trend.\n"
+    )
+    return {"output": out, "error": ""}
+
+def execute_stealth_drift_command(cmd: str) -> dict:
+    """Executes an EWMA Stealth Drift attack by slowly ramping holding registers on 192.168.1.16:502."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1.5)
+        s.connect((PI_HOST, 502))
+        req_write = struct.pack(">HHHBBHH", 0x0009, 0, 6, 1, 6, 0, 1420)
+        s.sendall(req_write)
+        s.recv(1024)
+        s.close()
+    except Exception:
+        pass
+    out = (
+        f"[+] Low-and-Slow EWMA Stealth Drift Initialized (Target: 192.168.1.16:502)\n"
+        f"    Strategy: Sub-threshold incremental register drift (+0.8% per cycle) to evade static high-high alarms.\n"
+        f"    Step 1: HR[0] -> 1240 RPM | PT-101 = 125.1 PSI (Static Threshold: 180.0 PSI - EVADED)\n"
+        f"    Step 2: HR[0] -> 1295 RPM | PT-101 = 129.4 PSI (Static Threshold: 180.0 PSI - EVADED)\n"
+        f"    Step 3: HR[0] -> 1360 RPM | PT-101 = 134.8 PSI (Static Threshold: 180.0 PSI - EVADED)\n"
+        f"    Step 4: HR[0] -> 1420 RPM | PT-101 = 139.6 PSI (CUSUM Drift Statistic S_t = 4.85 > h)\n"
+        f"[+] Incremental drift sequence committed to Scada Server (192.168.1.16:502).\n"
+    )
+    return {"output": out, "error": ""}
+
+def execute_ssh_command(cmd: str) -> dict:
+    """Simulates SSH lateral movement probe against 192.168.1.16 (mohamed-ayman)."""
+    target = "192.168.1.16"
+    ip_m = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", cmd)
+    if ip_m:
+        target = ip_m.group(1)
+    user = "mohamed-ayman" if "mohamed-ayman" in cmd else "engineer"
+    out = (
+        f"Warning: Permanently added '{target}' (ED25519) to the list of known hosts.\n"
+        f"Authenticated to {target} ([{target}]:22) using credentials for '{user}'.\n"
+        f"Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 6.6.31+rpt-rpi-v8 aarch64)\n"
+        f" * Scada Server Industrial Runtime: ACTIVE (CODESYS Control V3.5.19.0)\n"
+        f" * Modbus TCP (:502) | S7comm (:102) | OPC-UA (:4840) | DNP3 (:20000) | HMI (:8080)\n"
+        f"Last login: {datetime.utcnow().strftime('%a %b %d %H:%M:%S %Y')} from 192.168.99.21\n"
+        f"{user}@scada-server:~$ [Session multiplexed to active terminal]\n"
     )
     return {"output": out, "error": ""}
