@@ -290,7 +290,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) =>\n      (r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"is_anomaly\") or\n      (r[\"_measurement\"] == \"security_alerts\" and r[\"_field\"] == \"score\")\n  )\n  |> map(fn: (r) => ({\n      r with\n      _value: if r[\"_measurement\"] == \"security_alerts\" then 1.0 else float(v: r._value)\n  }))\n  |> group()\n  |> max(column: \"_value\")",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"is_anomaly\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -323,7 +323,7 @@
       "id": 6,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"anomaly_score\" and r[\"sensor\"] == \"ml_engine\")\n  |> map(fn: (r) => ({r with _value: float(v: r._value)}))\n  |> group(columns: [\"_measurement\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"anomaly_score\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2444,7 +2444,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"alert_fused_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"alert_fused_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -2512,7 +2512,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"active_layers_count\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"active_layers_count\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -2531,7 +2531,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "Alert Fused Score"
         },
         "overrides": []
       },
@@ -2544,7 +2545,7 @@
       "id": 203,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"alert_fused_score\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"alert_fused_score\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2563,7 +2564,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "LSTM-AE Process Error"
         },
         "overrides": []
       },
@@ -2576,7 +2578,7 @@
       "id": 204,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"lstm_ae_proc_error\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"lstm_ae_proc_error\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2595,7 +2597,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "LSTM-AE Network Error"
         },
         "overrides": []
       },
@@ -2608,7 +2611,7 @@
       "id": 205,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"lstm_ae_net_error\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"lstm_ae_net_error\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2627,7 +2630,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "IF Process Score"
         },
         "overrides": []
       },
@@ -2640,7 +2644,7 @@
       "id": 206,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"if_proc_score\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"if_proc_score\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2659,7 +2663,8 @@
           },
           "custom": {
             "lineWidth": 2
-          }
+          },
+          "displayName": "IF Network Score"
         },
         "overrides": []
       },
@@ -2672,7 +2677,7 @@
       "id": 207,
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"if_net_score\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"if_net_score\")\n  |> group(columns: [\"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -2757,7 +2762,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_0_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_0_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -2842,7 +2847,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_1_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_1_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -2927,7 +2932,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_2_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_2_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -3012,7 +3017,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_3_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_3_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -3097,7 +3102,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -2m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_4_active\")\n  |> last()",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_metrics\" and r[\"_field\"] == \"layer_4_active\")\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> last()",
           "refId": "A"
         }
       ],
@@ -3129,7 +3134,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"security_alerts\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"event_type\", \"severity\", \"layer\", \"mitre_tactic\", \"mitre_technique_id\", \"narrative\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 50)",
           "refId": "A"
         }
       ],

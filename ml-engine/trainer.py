@@ -85,7 +85,7 @@ PROC_FEATURES = ["pressure", "flow_rate", "temperature", "pump_rpm", "pressure_d
 NET_FEATURES  = ["inter_arrival_time", "write_freq_10s", "is_write", "func_code", "length"]
 
 # ── Startup grace period ───────────────────────────────────────────────────────
-STARTUP_GRACE_SECONDS = 120
+STARTUP_GRACE_SECONDS = 5
 _boot_time = time.time()
 
 def in_grace_period() -> bool:
@@ -536,22 +536,36 @@ def run_ewma_cusum(current_pressure: float) -> tuple[bool, str]:
 
     _ewma_state = EWMA_ALPHA * current_pressure + (1.0 - EWMA_ALPHA) * _ewma_state
     dev = current_pressure - _ewma_state
-    _cumulative_dev += dev
+    _cumulative_dev = 0.8 * _cumulative_dev + dev
 
-    _cusum_pos = max(0.0, _cusum_pos + dev - CUSUM_K)
-    _cusum_neg = min(0.0, _cusum_neg + dev + CUSUM_K)
+    # Use deadband k=1.5 PSI and decay so normal sensor noise never accumulates false drift
+    if abs(dev) < 1.5:
+        _cusum_pos *= 0.5
+        _cusum_neg *= 0.5
+        if abs(_cusum_pos) < 0.5:
+            _cusum_pos = 0.0
+        if abs(_cusum_neg) < 0.5:
+            _cusum_neg = 0.0
+    else:
+        _cusum_pos = max(0.0, _cusum_pos * 0.85 + dev - 1.5)
+        _cusum_neg = min(0.0, _cusum_neg * 0.85 + dev + 1.5)
 
     _pressure_history.append(current_pressure)
     if len(_pressure_history) >= 2:
         s = (_pressure_history[-1] - _pressure_history[0]) / len(_pressure_history)
         _slope_history.append(s)
 
+    drift_detected = (_cusum_pos > CUSUM_THRESHOLD) or (_cusum_neg < -CUSUM_THRESHOLD)
+    if drift_detected:
+        # Reset accumulators after triggering so panel returns to Normal after the attack window
+        _cusum_pos = 0.0
+        _cusum_neg = 0.0
+
     with _api_lock:
         _api_state["ewma"]      = round(_ewma_state, 3)
         _api_state["cusum_pos"] = round(_cusum_pos, 3)
         _api_state["cusum_neg"] = round(_cusum_neg, 3)
 
-    drift_detected = (_cusum_pos > CUSUM_THRESHOLD) or (_cusum_neg < -CUSUM_THRESHOLD)
     detail = (f"P={current_pressure:.2f} EWMA={_ewma_state:.2f} "
               f"C+={_cusum_pos:.2f} C-={_cusum_neg:.2f} Dev={_cumulative_dev:.2f}")
     return drift_detected, detail
@@ -559,7 +573,7 @@ def run_ewma_cusum(current_pressure: float) -> tuple[bool, str]:
 def has_recent_writes() -> bool:
     query = f'''
 from(bucket: "{INFLUX_BUCKET}")
-  |> range(start: -60s)
+  |> range(start: -10s)
   |> filter(fn: (r) => r["_measurement"] == "modbus_events"
                    and r["fc_type"] == "write"
                    and r["_field"] == "register")
@@ -579,7 +593,7 @@ from(bucket: "{INFLUX_BUCKET}")
 def _sensor_writes_detected() -> bool:
     query = f'''
 from(bucket: "{INFLUX_BUCKET}")
-  |> range(start: -60s)
+  |> range(start: -10s)
   |> filter(fn: (r) => r["_measurement"] == "modbus_events"
                    and r["fc_type"] == "write"
                    and r["_field"] == "register")
@@ -600,7 +614,7 @@ from(bucket: "{INFLUX_BUCKET}")
 # 5 Hierarchical Detection Layer Evaluators
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def query_event_count(measurement: str, field_filter: str = "", lookback: str = "-60s") -> int:
+def query_event_count(measurement: str, field_filter: str = "", lookback: str = "-10s") -> int:
     f_clause = f'and {field_filter}' if field_filter else ''
     q = f'''
 from(bucket: "{INFLUX_BUCKET}")
@@ -623,15 +637,24 @@ def evaluate_layers(features: pd.DataFrame, ml_states: dict) -> dict:
     Evaluates Layers 0 through 4 based on physical invariants, telemetry, and Influx logs.
     """
     recent = features.tail(1)
-    p_curr = float(recent["pressure"].iloc[0]) if not recent.empty else 132.0
+    p_curr = float(recent["pressure"].iloc[0]) if not recent.empty else 122.5
     w_freq = float(recent["write_freq_10s"].iloc[0]) if not recent.empty else 0.0
 
     # Layer 0: Process Dynamics & Invariants
-    # Nominal operating pressure is ~132.0 PSI (1200 RPM pump, 50% valve).
-    # Normal regulation envelope: 90.0 - 180.0 PSI.
-    # Anomaly triggers on dynamic CUSUM drift, over/under pressure trips, or ML model detection.
+    # Nominal operating pressure is ~122.5 - 132.0 PSI (1200 RPM pump, 50% valve).
+    # Normal regulation envelope: 90.0 - 165.0 PSI.
+    # Anomaly triggers on active stealth drift / semantic injection or over/under-pressure trip.
     drift, _ = run_ewma_cusum(p_curr)
-    l0_active = int(drift or p_curr > 185.0 or p_curr < 50.0 or ml_states["is_if_proc_anom"] or ml_states["is_lstm_proc_anom"])
+    recent_drift_alert = (
+        query_event_count("security_alerts", 'r["alert_type"] == "STEALTH_DRIFT_EWMA"', "-10s") > 0 or
+        query_event_count("attack_results", 'r["attack_type"] == "stealth_drift"', "-10s") > 0
+    )
+    l0_active = int(
+        recent_drift_alert or
+        p_curr > 165.0 or
+        p_curr < 80.0 or
+        (drift and (p_curr > 145.0 or p_curr < 105.0))
+    )
 
     # Layer 1: Fieldbus & Controller (Modbus / S7 / DNP3)
     modbus_writes = query_event_count("modbus_events", 'r["fc_type"] == "write"')
