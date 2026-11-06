@@ -3140,6 +3140,470 @@
       ],
       "title": "MITRE ATT&CK for ICS Matrix & Fused Security Alerts",
       "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 113
+      },
+      "id": 300,
+      "title": "Saudi Aramco Refinery Process Stream \u2014 4-Stage Sequential Unit Operations",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s1_desalter_pressure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Desalter Pressure (PSI)"
+              },
+              {
+                "id": "unit",
+                "value": "psi"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9900",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s1_crude_flow"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Crude Charge Flow (L/s)"
+              },
+              {
+                "id": "unit",
+                "value": "L/s"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#3274D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s1_salt_content_ptb"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Salt Content (PTB)"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E075B0",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 114
+      },
+      "id": 301,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"refinery_stages\")\n  |> filter(fn: (r) => r[\"_field\"] == \"s1_desalter_pressure\" or r[\"_field\"] == \"s1_crude_flow\" or r[\"_field\"] == \"s1_salt_content_ptb\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage 1: Crude Ingestion & Desalter",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s2_furnace_temp"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Furnace Coil Temp (\u00b0C)"
+              },
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E24D42",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s2_column_pressure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Column Top P (bar)"
+              },
+              {
+                "id": "unit",
+                "value": "bar"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s2_diesel_flow"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Diesel Cut Flow (L/s)"
+              },
+              {
+                "id": "unit",
+                "value": "L/s"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 114
+      },
+      "id": 302,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"refinery_stages\")\n  |> filter(fn: (r) => r[\"_field\"] == \"s2_furnace_temp\" or r[\"_field\"] == \"s2_column_pressure\" or r[\"_field\"] == \"s2_diesel_flow\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage 2: Distillation Unit (ADU)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s3_reactor_pressure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "HDS Reactor P (PSI)"
+              },
+              {
+                "id": "unit",
+                "value": "psi"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F2CC0C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s3_bed_temp"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Catalyst Bed Temp (\u00b0C)"
+              },
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF780A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s3_sulfur_ppm"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Diesel Sulfur (ppm)"
+              },
+              {
+                "id": "unit",
+                "value": "ppm"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FADE2A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 114
+      },
+      "id": 303,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"refinery_stages\")\n  |> filter(fn: (r) => r[\"_field\"] == \"s3_reactor_pressure\" or r[\"_field\"] == \"s3_bed_temp\" or r[\"_field\"] == \"s3_sulfur_ppm\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage 3: Hydrodesulfurization (HDS)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s4_export_pressure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Export Manifold P (PSI)"
+              },
+              {
+                "id": "unit",
+                "value": "psi"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#299C46",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s4_export_flow"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline Custody Flow (L/s)"
+              },
+              {
+                "id": "unit",
+                "value": "L/s"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "s4_diesel_cetane"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Diesel Cetane Index"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 114
+      },
+      "id": 304,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"sensor_logs\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"refinery_stages\")\n  |> filter(fn: (r) => r[\"_field\"] == \"s4_export_pressure\" or r[\"_field\"] == \"s4_export_flow\" or r[\"_field\"] == \"s4_diesel_cetane\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage 4: Blending & Pipeline Export",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",
