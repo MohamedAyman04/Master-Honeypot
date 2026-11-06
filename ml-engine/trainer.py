@@ -76,6 +76,25 @@ REPLAY_LSTM_FILE     = "/data/replay_lstm.keras"
 REPLAY_SCALER_FILE   = "/data/replay_scaler.pkl"
 TRAINING_START_FILE  = "/data/training_start.txt"
 
+# ── XGBoost Suite Paths (Role A & Role B) ────────────────────────────────────
+XGB_MITRE_FILE       = "/data/xgb_mitre.json"
+XGB_PHYSICS_FILE     = "/data/xgb_physics.json"
+
+# ── XGBoost Threat Attribution & Physics Suite ───────────────────────────────
+try:
+    from xgboost_suite import XGBoostSuite, MITRE_TECHNIQUES, ROLE_A_FEATURES, ROLE_B_FEATURES
+    _xgb_suite = XGBoostSuite(
+        mitre_model_path=XGB_MITRE_FILE,
+        physics_model_path=XGB_PHYSICS_FILE,
+        residual_threshold=15.0
+    )
+    HAS_XGB_SUITE = True
+    print(f"[XGBoost] Suite initialized — Role A: {_xgb_suite.mitre_classifier.get_status()['status']}, Role B: {_xgb_suite.physics_regressor.get_status()['status']}")
+except Exception as _e_xgb:
+    _xgb_suite = None
+    HAS_XGB_SUITE = False
+    print(f"[XGBoost] Suite initialization notice: {_e_xgb}")
+
 WARMUP_PERIOD  = 180   # seconds of training before models are frozen
 MIN_SAMPLES    = 50    # minimum rows needed before any model can train
 LOOP_INTERVAL  = 15    # main loop cadence (seconds)
@@ -409,6 +428,19 @@ _api_state = {
     "ewma":              None,
     "cusum_pos":         0.0,
     "cusum_neg":         0.0,
+    "xgb_mitre_status":          _xgb_suite.mitre_classifier.get_status()["status"] if HAS_XGB_SUITE else "UNAVAILABLE",
+    "xgb_physics_status":        _xgb_suite.physics_regressor.get_status()["status"] if HAS_XGB_SUITE else "UNAVAILABLE",
+    "xgb_mitre_ready":           _xgb_suite.mitre_classifier.is_trained if HAS_XGB_SUITE else False,
+    "xgb_physics_ready":         _xgb_suite.physics_regressor.is_trained if HAS_XGB_SUITE else False,
+    "xgb_last_mitre_technique":   "BENIGN",
+    "xgb_last_mitre_name":        "Nominal Baseline Operation",
+    "xgb_last_mitre_confidence":  0.95,
+    "xgb_last_mitre_explanation": "Nominal operational baseline",
+    "xgb_last_physics_predicted": 125.0,
+    "xgb_last_physics_residual":  0.0,
+    "xgb_last_physics_residual_pct": 0.0,
+    "xgb_last_physics_anom":      0,
+    "xgb_last_physics_explanation": "Nominal hydraulic state",
 }
 _api_lock = threading.Lock()
 
@@ -785,6 +817,39 @@ def run_ml_cycle() -> None:
     # 3. Compute Narrow Mechanism Gate Alert Fusion
     is_alert_fused, fused_status, fused_score, reason = compute_alert_fused(layers, ml_states, recent)
 
+    # 3b. Evaluate XGBoost Suite (Role A: MITRE ATT&CK Classifier & Role B: Physics Residual Regressor)
+    p_curr = float(recent["pressure"].iloc[0]) if not recent.empty else 125.0
+    w_freq = float(recent["write_freq_10s"].iloc[0]) if not recent.empty else 0.0
+
+    xgb_sample = {
+        "pressure": float(p_curr),
+        "flow_rate": float(recent["flow_rate"].iloc[0]) if ("flow_rate" in recent.columns and not recent.empty) else 45.0,
+        "temperature": float(recent["temperature"].iloc[0]) if ("temperature" in recent.columns and not recent.empty) else 65.0,
+        "pump_rpm": float(recent["pump_rpm"].iloc[0]) if ("pump_rpm" in recent.columns and not recent.empty) else 1200.0,
+        "pressure_delta": float(recent["pressure_delta"].iloc[0]) if ("pressure_delta" in recent.columns and not recent.empty) else 0.0,
+        "pressure_mean_dev": float(recent["pressure_mean_dev"].iloc[0]) if ("pressure_mean_dev" in recent.columns and not recent.empty) else 0.0,
+        "inter_arrival_time": float(recent["inter_arrival_time"].iloc[0]) if ("inter_arrival_time" in recent.columns and not recent.empty) else 1.0,
+        "write_freq_10s": float(w_freq),
+        "is_write": int(recent["is_write"].iloc[0]) if ("is_write" in recent.columns and not recent.empty) else 0,
+        "func_code": int(recent["func_code"].iloc[0]) if ("func_code" in recent.columns and not recent.empty) else 0,
+        "length": int(recent["length"].iloc[0]) if ("length" in recent.columns and not recent.empty) else 0,
+        "lstm_proc_err": float(lstm_proc_err),
+        "lstm_net_err": float(lstm_net_err),
+        "if_proc_score": float(if_proc_score),
+        "valve_pos": 50.0,
+        "pressure_lag1": float(p_curr) - (float(recent["pressure_delta"].iloc[0]) if ("pressure_delta" in recent.columns and not recent.empty) else 0.0)
+    }
+
+    xgb_eval = None
+    if HAS_XGB_SUITE and _xgb_suite is not None:
+        try:
+            xgb_eval = _xgb_suite.evaluate_sample(xgb_sample, observed_pressure=float(p_curr))
+        except Exception as _e_xeval:
+            print(f"[XGBoost] Evaluation notice: {_e_xeval}")
+
+    mitre_res = xgb_eval["role_a_mitre"] if xgb_eval else None
+    phys_res  = xgb_eval["role_b_physics"] if xgb_eval else None
+
     with _api_lock:
         _api_state["last_if_proc_score"] = round(if_proc_score, 4)
         _api_state["last_if_net_score"]  = round(if_net_score, 4)
@@ -798,6 +863,17 @@ def run_ml_cycle() -> None:
         _api_state["alert_fused_active"] = is_alert_fused
         _api_state["fused_status"]       = fused_status
         _api_state["fused_score"]        = fused_score
+        if mitre_res:
+            _api_state["xgb_last_mitre_technique"]   = mitre_res["technique_id"]
+            _api_state["xgb_last_mitre_name"]        = mitre_res["technique_name"]
+            _api_state["xgb_last_mitre_confidence"]  = mitre_res["confidence"]
+            _api_state["xgb_last_mitre_explanation"] = mitre_res["explainability"]["narrative"]
+        if phys_res:
+            _api_state["xgb_last_physics_predicted"]    = phys_res["predicted_pressure"]
+            _api_state["xgb_last_physics_residual"]     = phys_res["residual"]
+            _api_state["xgb_last_physics_residual_pct"] = phys_res["residual_pct"]
+            _api_state["xgb_last_physics_anom"]         = int(phys_res["is_residual_anomaly"])
+            _api_state["xgb_last_physics_explanation"]  = phys_res["explainability"]["narrative"]
 
     # 4. Stream Structured Security Metrics to InfluxDB
     point = (
@@ -825,6 +901,15 @@ def run_ml_cycle() -> None:
         .field("if_net_anom", int(is_if_net_anom))
         .time(time.time_ns(), WritePrecision.NS)
     )
+    if mitre_res:
+        point.tag("xgb_mitre_id", mitre_res["technique_id"])
+        point.tag("xgb_mitre_name", mitre_res["technique_name"])
+        point.field("xgb_mitre_confidence", float(mitre_res["confidence"]))
+    if phys_res:
+        point.field("xgb_physics_predicted", float(phys_res["predicted_pressure"]))
+        point.field("xgb_physics_residual", float(phys_res["residual"]))
+        point.field("xgb_physics_anom", int(phys_res["is_residual_anomaly"]))
+
     if is_alert_fused:
         _mitre_enrich(point, "alert_fused")
     write_api.write(bucket=INFLUX_BUCKET, record=point)
@@ -871,11 +956,14 @@ def run_ml_cycle() -> None:
             _mitre_enrich(l_p, l_name)
             write_api.write(bucket=INFLUX_BUCKET, record=l_p)
 
+    xgb_log = ""
+    if mitre_res and phys_res:
+        xgb_log = f" | XGB=[{mitre_res['technique_id']}:{mitre_res['confidence']*100:.0f}% R={phys_res['residual']:.1f}PSI]"
     print(
         f"[ML] Proc=(IF:{if_proc_score:.3f} LSTM:{lstm_proc_err:.4f}) | "
         f"Net=(IF:{if_net_score:.3f} LSTM:{lstm_net_err:.4f}) | "
         f"Layers=[{layers['l0']},{layers['l1']},{layers['l2']},{layers['l3']},{layers['l4']}] | "
-        f"Fused={fused_status}"
+        f"Fused={fused_status}{xgb_log}"
     )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -884,7 +972,7 @@ def run_ml_cycle() -> None:
 
 def _start_api_server() -> None:
     try:
-        from fastapi import FastAPI, Query as FQuery
+        from fastapi import FastAPI, Query as FQuery, Body
         from fastapi.middleware.cors import CORSMiddleware
         import uvicorn
 
@@ -916,6 +1004,36 @@ def _start_api_server() -> None:
         def get_metrics():
             with _api_lock:
                 return dict(_api_state)
+
+        @app.get("/ml/xgboost/status")
+        def get_xgboost_status():
+            if HAS_XGB_SUITE and _xgb_suite is not None:
+                return _xgb_suite.get_full_status()
+            return {"error": "XGBoost suite unavailable", "xgboost_installed": False}
+
+        @app.post("/ml/xgboost/classify")
+        def classify_features(sample: dict = Body(...)):
+            if HAS_XGB_SUITE and _xgb_suite is not None:
+                return _xgb_suite.mitre_classifier.classify(sample)
+            return {"error": "XGBoost suite unavailable"}
+
+        @app.post("/ml/xgboost/physics")
+        def evaluate_physics(payload: dict = Body(...)):
+            if HAS_XGB_SUITE and _xgb_suite is not None:
+                obs_p = float(payload.get("observed_pressure", 125.0))
+                feats = payload.get("features", payload)
+                return _xgb_suite.physics_regressor.predict_and_evaluate(feats, observed_pressure=obs_p)
+            return {"error": "XGBoost suite unavailable"}
+
+        @app.post("/ml/xgboost/train")
+        def trigger_campaign_training():
+            return {
+                "status": "READY_FOR_TRAINING_CAMPAIGN",
+                "message": "Endpoints and schema initialized. Provide dataset to initiate XGBoost training campaign.",
+                "role_a_features": ROLE_A_FEATURES if HAS_XGB_SUITE else [],
+                "role_b_features": ROLE_B_FEATURES if HAS_XGB_SUITE else [],
+                "target_mitre_classes": [m["technique_id"] for m in MITRE_TECHNIQUES.values()] if HAS_XGB_SUITE else []
+            }
 
         uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
     except Exception as e:

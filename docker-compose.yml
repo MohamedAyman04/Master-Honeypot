@@ -227,6 +227,7 @@ services:
       - shared-data:/data # model files persisted here
       - ./shared:/app/shared:ro # MITRE mapping table
       - ./ml-engine/trainer.py:/app/trainer.py:ro
+      - ./ml-engine/xgboost_suite.py:/app/xgboost_suite.py:ro
     depends_on:
       historian:
         condition: service_started

@@ -12,12 +12,14 @@ RUN pip install --no-cache-dir \
     fastapi \
     "uvicorn[standard]" \
     tensorflow-cpu \
-    keras
+    keras \
+    xgboost
 
 WORKDIR /app
 
 COPY trainer.py .
 COPY detector.py .
+COPY xgboost_suite.py .
 
 EXPOSE 8000
 
