@@ -903,8 +903,14 @@ def toggle_estop():
     return jsonify({"status": "ok", "emergency_stop": plc.emergency_stop})
 
 def run_webvisu():
-    logger.info("Starting CODESYS WebVisu HMI on http://0.0.0.0:8080...")
-    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False, threaded=True)
+    webvisu_port = int(os.getenv("WEBVISU_PORT", "8080"))
+    try:
+        logger.info(f"Starting CODESYS WebVisu HMI on http://0.0.0.0:{webvisu_port}...")
+        app.run(host="0.0.0.0", port=webvisu_port, debug=False, use_reloader=False, threaded=True)
+    except OSError as e:
+        fallback_port = 8082
+        logger.warning(f"Port {webvisu_port} unavailable ({e}). Falling back to WebVisu on http://0.0.0.0:{fallback_port}...")
+        app.run(host="0.0.0.0", port=fallback_port, debug=False, use_reloader=False, threaded=True)
 
 # ── Main Entrypoint ──────────────────────────────────────────────────────────
 def main():

@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=/home/mohamed-ayman/codesys_runtime
+Environment="WEBVISU_PORT=8082"
 ExecStart=/home/mohamed-ayman/codesys_env/bin/python /home/mohamed-ayman/codesys_runtime/codesys_softplc.py
 Restart=always
 RestartSec=3

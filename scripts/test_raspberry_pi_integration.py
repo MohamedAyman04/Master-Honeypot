@@ -31,14 +31,14 @@ def resolve_default_host():
             h = h.strip()
             if h and h not in candidates:
                 candidates.append(h)
-    for default_ip in ["192.168.1.16", "172.20.10.8", "192.168.1.8"]:
+    for default_ip in ["192.168.1.16", "192.168.1.7", "172.20.10.8", "192.168.1.8"]:
         if default_ip not in candidates:
             candidates.append(default_ip)
     for host in candidates:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(0.8)
-            if s.connect_ex((host, 502)) == 0 or s.connect_ex((host, 8080)) == 0:
+            if s.connect_ex((host, 502)) == 0 or s.connect_ex((host, 8080)) == 0 or s.connect_ex((host, 8082)) == 0:
                 s.close()
                 return host
             s.close()
@@ -157,27 +157,37 @@ class ModbusTcpSocketClient:
 # ── Test Cases ───────────────────────────────────────────────────────────────
 
 def test_webvisu_http():
+    ports_to_try = [WEBVISU_PORT, 8082, 8080]
+    seen = set()
+    ports_to_try = [p for p in ports_to_try if not (p in seen or seen.add(p))]
+
+    last_err = None
+    for p in ports_to_try:
+        url = f"http://{PI_HOST}:{p}/api/status"
+        try:
+            t0 = time.time()
+            req = urllib.request.Request(url, headers={'User-Agent': 'MasterHoneypotTest/1.0'})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                elapsed = (time.time() - t0) * 1000
+                data = json.loads(resp.read().decode('utf-8'))
+                print_header(f"Test 1: WebVisu HTTP & REST API (http://{PI_HOST}:{p})")
+                print(f"  [PASS] HTTP GET {url} returned 200 OK in {elapsed:.1f}ms")
+                print(f"         - Pressure       : {data['pressure']:.2f} PSI")
+                print(f"         - Flow Rate      : {data['flow_rate']:.2f} L/s")
+                print(f"         - Temperature    : {data['temperature']:.2f} °C")
+                print(f"         - Pump RPM       : {data['pump_rpm']:.0f} RPM")
+                print(f"         - Valve Pos      : {data['valve_pos']*100:.1f}%")
+                print(f"         - Scan Cycles    : {data['scan_count']}")
+                print(f"         - High Pressure  : {data['alarm_high_pressure']}")
+                print(f"         - Emergency Stop : {'TRIPPED' if data['emergency_stop'] == 1 else 'NORMAL'}")
+                return True
+        except Exception as e:
+            last_err = e
+            continue
+
     print_header(f"Test 1: WebVisu HTTP & REST API (http://{PI_HOST}:{WEBVISU_PORT})")
-    url = f"http://{PI_HOST}:{WEBVISU_PORT}/api/status"
-    try:
-        t0 = time.time()
-        req = urllib.request.Request(url, headers={'User-Agent': 'MasterHoneypotTest/1.0'})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            elapsed = (time.time() - t0) * 1000
-            data = json.loads(resp.read().decode('utf-8'))
-            print(f"  [PASS] HTTP GET {url} returned 200 OK in {elapsed:.1f}ms")
-            print(f"         - Pressure       : {data['pressure']:.2f} PSI")
-            print(f"         - Flow Rate      : {data['flow_rate']:.2f} L/s")
-            print(f"         - Temperature    : {data['temperature']:.2f} °C")
-            print(f"         - Pump RPM       : {data['pump_rpm']:.0f} RPM")
-            print(f"         - Valve Pos      : {data['valve_pos']*100:.1f}%")
-            print(f"         - Scan Cycles    : {data['scan_count']}")
-            print(f"         - High Pressure  : {data['alarm_high_pressure']}")
-            print(f"         - Emergency Stop : {'TRIPPED' if data['emergency_stop'] == 1 else 'NORMAL'}")
-            return True
-    except Exception as e:
-        print(f"  [FAIL] Could not connect to WebVisu at {url}: {e}")
-        return False
+    print(f"  [FAIL] Could not connect to WebVisu at http://{PI_HOST}:{WEBVISU_PORT}/api/status: {last_err}")
+    return False
 
 def test_modbus_read():
     print_header(f"Test 2: Modbus TCP Read Holding Registers ({PI_HOST}:{MODBUS_PORT})")

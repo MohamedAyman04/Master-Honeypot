@@ -209,7 +209,7 @@ services:
       - sandbox-net
     env_file: .env
     environment:
-      - RPI_HOST=${RPI_HOST:-192.168.1.16,172.20.10.8,192.168.1.8}
+      - RPI_HOST=${RPI_HOST:-192.168.1.16,192.168.1.7,172.20.10.8,192.168.1.8}
       - REDIS_HOST=redis
       - INFLUX_URL=http://historian:8086
       - INFLUX_TOKEN=${INFLUX_TOKEN}
